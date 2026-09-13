@@ -22,4 +22,7 @@ urlpatterns = [
     re_path(r'^api/mpesa/status/(?P<payment_id>\d+)/?$', views.mpesa_status),
     re_path(r'^api/mpesa/callback/?$', views.mpesa_callback),
     re_path(r'^api/mpesa/history/?$', views.mpesa_history),
+    re_path(r'^api/analytics/?$', views.analytics),
+    re_path(r'^api/invites/create/?$', views.invite_create),
+    re_path(r'^api/invites/accept/?$', views.invite_accept),
 ]

@@ -72,15 +72,13 @@ export default function Pricing() {
               className={`mt-4 block rounded-xl px-4 py-2.5 text-center font-bold ${
                 p.is_target ? "bg-plum text-white" : "border border-line bg-surface2 hover:border-dim"
               }`}
-            >
-              Start 14 days free
+            >               Start 7 days free
             </Link>
           </div>
         ))}
       </div>
 
-      <p className="mt-6 text-center text-sm text-dim">
-        14-day free trial — no card required. Experience the full loop:
+      <p className="mt-6 text-center text-sm text-dim">         7-day free trial — no card required. Experience the full loop:
         service → bill → QR → customer verifies → payment → receipt.
       </p>
     </main>

@@ -1,3 +1,4 @@
+import calendar
 import random
 import string
 from datetime import timedelta
@@ -12,7 +13,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 
 from .models import (Plan, Business, StaffMember, Service, Bill, BillItem,
-                     BillEdit, AuditEvent, MpesaPayment)
+                     BillEdit, AuditEvent, MpesaPayment, StaffInvite)
 from .mpesa import DarajaError, stk_push, stk_query, normalize_phone
 from .serializers import (PlanSerializer, BusinessSerializer, BillSerializer,
                           ServiceSerializer, StaffSerializer, audit)
@@ -343,10 +344,9 @@ def _add_months(dt, months):
     y, m = dt.year, dt.month + months
     y += (m - 1) // 12
     m = (m - 1) % 12 + 1
-    try:
-        return dt.replace(year=y, month=m)
-    except ValueError:
-        return dt.replace(year=y, month=m, day=1) - timedelta(days=1)
+    days_in = calendar.monthrange(y, m)[1]
+    day = min(dt.day, days_in)
+    return dt.replace(year=y, month=m, day=day)
 
 
 def _settle_success(biz, pay):
@@ -354,9 +354,10 @@ def _settle_success(biz, pay):
     stacking past the current paid-until date."""
     plan, cycle = pay.plan, pay.cycle
     now = timezone.now()
+    # Monthly payments buy 30 days; annual buys 365 (no calendar drift).
     base = max(now, biz.plan_paid_until or now)
-    months = 12 if cycle == 'annual' else 1
-    until = _add_months(base, months) - timedelta(days=1)
+    days = 365 if cycle == 'annual' else 30
+    until = base + timedelta(days=days)
 
     pay.status = 'success'
     pay.extends_until = until
@@ -515,6 +516,130 @@ def mpesa_history(request):
         } for p in rows],
         'subscription': biz.subscription_info(),
     })
+
+
+# --- Owner analytics -----------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([])
+def analytics(request):
+    """Dashboard graphs: 14-day revenue trend, this-month vs last-month,
+    staff leaderboard, top services, verification funnel, status donut."""
+    biz = get_business(request)
+    require_owner_pin(request, biz)
+
+    today = timezone.localdate()
+    month_start = today.replace(day=1)
+    last_month_start = (month_start - timedelta(days=1)).replace(day=1)
+
+    def revenue_since(d):
+        return biz.bills.filter(status='paid', paid_at__date__gte=d) \
+            .aggregate(s=Sum('total'))['s'] or 0
+
+    # 14-day revenue trend (paid revenue by day)
+    days, labels, series = 14, [], []
+    per_day = dict(biz.bills.filter(status='paid', paid_at__date__gte=today - timedelta(days=13))
+                   .values_list('paid_at__date')
+                   .annotate(s=Sum('total')).values_list('paid_at__date', 's'))
+    # values_list+annotate combo returns rows; rebuild safely:
+    per_day = {
+        row['d']: row['s']
+        for row in biz.bills.filter(status='paid', paid_at__date__gte=today - timedelta(days=13))
+        .values(d=F('paid_at__date')).annotate(s=Sum('total'))
+    }
+    for i in range(days):
+        d = today - timedelta(days=13 - i)
+        labels.append(d.strftime('%-d %b'))
+        series.append(per_day.get(d) or 0)
+
+    this_month = revenue_since(month_start)
+    last_month = biz.bills.filter(status='paid',
+                                  paid_at__date__gte=last_month_start,
+                                  paid_at__date__lt=month_start) \
+        .aggregate(s=Sum('total'))['s'] or 0
+    mom_pct = round((this_month - last_month) * 100.0 / last_month, 1) if last_month else None
+
+    # Staff leaderboard (this month, by collected revenue)
+    staff_stats = list(biz.bills.filter(created_at__date__gte=month_start)
+                       .values(staff_name=F('staff__name'))
+                       .annotate(
+                           bills=Count('id'),
+                           collected=Sum('total', filter=Q(status='paid')),
+                           verified=Count('id', filter=Q(status__in=['approved', 'paid'])),
+                       ).order_by('-collected'))
+    for s in staff_stats:
+        s['collected'] = s['collected'] or 0
+        s['verify_rate'] = round((s['verified'] or 0) * 100.0 / s['bills']) if s['bills'] else 0
+
+    # Top services (this month, by revenue share of paid bills)
+    top_services = list(BillItem.objects.filter(bill__business=biz, bill__status='paid',
+                                                bill__paid_at__date__gte=month_start)
+                        .values('name')
+                        .annotate(revenue=Sum('price'), count=Count('id'))
+                        .order_by('-revenue')[:6])
+
+    # Verification funnel (this month): created → verified → paid
+    month_qs = biz.bills.filter(created_at__date__gte=month_start)
+    funnel = {
+        'created': month_qs.count(),
+        'verified': month_qs.filter(status__in=['approved', 'paid', 'disputed']).count(),
+        'paid': month_qs.filter(status='paid').count(),
+    }
+    status_counts = dict(month_qs.values_list('status')
+                         .annotate(c=Count('id')).values_list('status', 'c'))
+
+    return Response({
+        'trend': {'labels': labels, 'series': series},
+        'month': {'this': this_month, 'last': last_month, 'mom_pct': mom_pct},
+        'staff': staff_stats,
+        'top_services': top_services,
+        'funnel': funnel,
+        'status_counts': status_counts,
+        'subscription': biz.subscription_info(),
+    })
+
+
+# --- Staff invites ---------------------------------------------------------------
+
+@api_view(['POST'])
+@permission_classes([])
+def invite_create(request):
+    """Owner creates a staff invite; returns the secret link code."""
+    biz = get_business(request)
+    require_owner_pin(request, biz)
+    name = (request.data.get('name') or '').strip()
+    if not name:
+        raise Invalid('name required')
+    if biz.staff.count() >= biz.plan.max_staff:
+        raise PaymentRequired(
+            f"Your {biz.plan.name} plan allows {biz.plan.max_staff} staff. Upgrade to add more.")
+    inv = StaffInvite.objects.create(
+        business=biz, name=name, code=gen_code() + gen_code(), created_by_pin=biz.owner_pin)
+    return Response({
+        'code': inv.code,
+        'url': f"{settings.PUBLIC_BASE_URL.rstrip('/')}/app?invite={inv.code}",
+        'name': inv.name,
+    }, status=http.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([])
+def invite_accept(request):
+    """Staff member accepts an invite: creates the staff record.
+    The business slug comes from the invite itself — no headers needed."""
+    code = (request.data.get('code') or '').strip()
+    inv = StaffInvite.objects.select_related('business').filter(code=code, used=False).first()
+    if not inv:
+        return Response({'error': 'This invite link is invalid or already used.'},
+                        status=http.HTTP_400_BAD_REQUEST)
+    member, created = StaffMember.objects.get_or_create(business=inv.business, name=inv.name)
+    inv.used = True
+    inv.used_at = timezone.now()
+    inv.save(update_fields=['used', 'used_at'])
+    return Response({
+        'business': {'name': inv.business.name, 'slug': inv.business.slug},
+        'staff': {'id': member.id, 'name': member.name},
+    }, status=http.HTTP_201_CREATED)
 
 
 # --- Owner dashboard -----------------------------------------------------------

@@ -69,7 +69,8 @@ def run():
 
     plan_growth = Plan.objects.get(code='growth')
     biz = Business.objects.create(name='XYZ Salon', slug='xyz-salon',
-                                  plan=plan_growth, owner_pin='2026')
+                                  plan=plan_growth, owner_pin='2026',
+                                  plan_paid_until=timezone.now() + timedelta(days=30))
 
     staff = {}
     for nm, role in [('Jane', 'staff'), ('Alice', 'staff'), ('Brian', 'manager')]:

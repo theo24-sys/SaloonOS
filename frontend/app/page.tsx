@@ -32,8 +32,7 @@ export default function Home() {
         <Link
           href="/signup"
           className="rounded-xl bg-plum px-5 py-3 font-bold text-white shadow-[0_12px_30px_-12px_rgba(93,58,88,0.6)] transition hover:bg-[#4d2f48]"
-        >
-          Start 14-day free trial
+        >           Start 7-day free trial
         </Link>
         <Link href="/pricing" className="rounded-xl border border-line bg-surface px-5 py-3 font-bold hover:border-dim">
           See pricing

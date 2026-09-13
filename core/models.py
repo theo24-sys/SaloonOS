@@ -25,7 +25,7 @@ class Business(models.Model):
     owner_pin = models.CharField(max_length=8)      # dashboard access
     created_at = models.DateTimeField(auto_now_add=True)
     # --- Subscription state (M-Pesa plan payments) ---
-    trial_ends_at = models.DateTimeField(null=True, blank=True)  # 14-day trial from signup
+    trial_ends_at = models.DateTimeField(null=True, blank=True)  # 7-day trial from signup
     plan_paid_until = models.DateTimeField(null=True, blank=True)  # set by successful STK payment
 
     # --- Branding (owner-editable; trust elements stay platform-controlled) ---
@@ -35,14 +35,17 @@ class Business(models.Model):
     accent = models.CharField(max_length=10, default='blush')  # blush|rose|luxe|plum|minimal
     thank_you = models.CharField(max_length=150, default='Thank you for choosing us ♡')
 
+    TRIAL_DAYS = 7
+
     def save(self, *args, **kwargs):
-        # New businesses start a 14-day free trial automatically.
+        # New businesses start a free trial automatically.
         if self._state.adding and self.trial_ends_at is None:
-            self.trial_ends_at = timezone.now() + timezone.timedelta(days=14)
+            self.trial_ends_at = timezone.now() + timezone.timedelta(days=self.TRIAL_DAYS)
         super().save(*args, **kwargs)
 
     def subscription_info(self):
-        """Single source of truth for subscription state (API + dashboard)."""
+        """Single source of truth for subscription state (API + dashboard).
+        `reminder` is True inside the 5-day window before expiry."""
         now = timezone.now()
         paid = bool(self.plan_paid_until and self.plan_paid_until > now)
         trial = bool(self.trial_ends_at and self.trial_ends_at > now)
@@ -52,8 +55,9 @@ class Business(models.Model):
             state, end = 'trial', self.trial_ends_at
         else:
             state, end = 'expired', None
-        return {'state': state, 'end': end,
-                'days_left': max(0, (end - now).days) if end else 0}
+        days_left = max(0, (end - now).days) if end else 0
+        return {'state': state, 'end': end, 'days_left': days_left,
+                'reminder': state != 'expired' and days_left <= 5}
 
     def subscription_active(self):
         return self.subscription_info()['state'] != 'expired'
@@ -142,6 +146,22 @@ class BillEdit(models.Model):
 
     def __str__(self):
         return f"#{self.bill.code} {self.item_name}: {self.old_price} → {self.new_price}"
+
+
+class StaffInvite(models.Model):
+    """A signup link for one staff member, issued by the owner.
+    The code is the secret in the URL (/app?invite=...); it becomes invalid
+    once used or revoked."""
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='staff_invites')
+    name = models.CharField(max_length=80)
+    code = models.CharField(max_length=12, unique=True)
+    created_by_pin = models.CharField(max_length=8)   # owner PIN at issuance (audit context)
+    used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"invite:{self.code} {self.name}@{self.business.slug} used={self.used}"
 
 
 class MpesaPayment(models.Model):

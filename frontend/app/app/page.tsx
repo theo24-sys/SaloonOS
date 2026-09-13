@@ -29,6 +29,8 @@ export default function StaffApp() {
   const [bill, setBill] = useState<Bill | null>(null);
   const [err, setErr] = useState("");
   const [toast, setToast] = useState("");
+  const [invite, setInvite] = useState<{ code: string; name: string } | null>(null);
+  const [inviteMsg, setInviteMsg] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(() => {
@@ -39,6 +41,21 @@ export default function StaffApp() {
   }, []);
   useEffect(load, [load]);
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  // Staff invite links (/app?invite=CODE) bind this device to the salon.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("invite");
+    if (!code) return;
+    api.inviteAccept(code)
+      .then((r) => {
+        store.slug = r.business.slug;
+        setInvite({ code, name: r.staff.name });
+        setInviteMsg(`Welcome, ${r.staff.name} — you're signed in to ${r.business.name}.`);
+        window.history.replaceState({}, "", "/app");
+        load();
+      })
+      .catch((e) => setInviteMsg(e.message));
+  }, [load]);
 
   const total = items.reduce((s, it) => s + (Number(it.price) || 0), 0);
 
@@ -107,6 +124,11 @@ export default function StaffApp() {
 
   return (
     <main className="mx-auto max-w-md px-5 py-6">
+      {inviteMsg && (
+        <div className={`mb-3 rounded-2xl border p-3 text-sm ${invite ? "border-good/40 bg-good/10 text-ink" : "border-bad/40 bg-bad/10 text-bad"}`}>
+          {inviteMsg}
+        </div>
+      )}
       {!bill ? (
         <>
           <h1 className="font-display text-2xl font-bold">New bill <span className="text-base font-medium text-dim">— {cat.business.name}</span></h1>

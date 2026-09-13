@@ -33,7 +33,7 @@ Open **http://localhost:3000**
 |---|---|---|
 | `/` | everyone | Landing page |
 | `/pricing` | everyone | 4 plans (KSh 299/499/799/1,299) + annual toggle (2 months free) |
-| `/signup` | owner | 14-day free trial, no card → creates business + 2 staff, drops into the app |
+| `/signup` | owner | 7-day free trial, no card → creates business + 2 staff, drops into the app |
 | `/app` | staff | Build bill → QR → live-waits for customer verification → record payment |
 | `/v/[code]` | customer (no login) | See the bill → **approve** or **report a problem** → branded receipt + share (WhatsApp/SMS/PDF) |
 | `/r/[code]` | anyone | Public receipt-authenticity lookup — scan the QR on a receipt to prove it's genuine |

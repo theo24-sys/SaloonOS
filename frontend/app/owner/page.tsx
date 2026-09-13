@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { api, Dashboard, money, store } from "@/lib/api";
+import { api, Analytics, Dashboard, money, store } from "@/lib/api";
 import { Badge } from "@/app/receipt";
 // Badge renders status chips for both pages
 
@@ -18,6 +18,9 @@ export default function OwnerDash() {
   const [pin, setPin] = useState(store.pin);
   const [err, setErr] = useState("");
   const [locked, setLocked] = useState(true);
+  const [analyticsData, setAnalyticsData] = useState<Analytics | null>(null);
+  const [inviteUrl, setInviteUrl] = useState("");
+  const [inviteName, setInviteName] = useState("");
 
   const load = useCallback((p: string) => {
     setErr("");
@@ -27,6 +30,7 @@ export default function OwnerDash() {
         if (!store.pin) setErr(e.message);
         else { localStorage.removeItem("sp_pin"); setData(null); setLocked(true); }
       });
+    api.analytics(store.slug, p).then(setAnalyticsData).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -40,6 +44,19 @@ export default function OwnerDash() {
     const t = setInterval(() => load(store.pin), 8000);
     return () => clearInterval(t);
   }, [locked, load]);
+
+  async function createInvite() {
+    const name = inviteName.trim();
+    if (!name) return;
+    try {
+      const r = await api.inviteCreate(store.slug, store.pin, name);
+      setInviteUrl(r.url);
+      setInviteName("");
+      load(store.pin);
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  }
 
   async function voidBill(code: string) {
     const reason = window.prompt(`Void bill #${code} — reason? (recorded in the audit trail)`);
@@ -118,23 +135,27 @@ export default function OwnerDash() {
         </div>
       </div>
 
-      {/* Subscription banner */}
-      {data.subscription.state !== "paid" && (
-        <div className={`mt-4 rounded-2xl border p-4 ${data.subscription.state === "expired" ? "border-bad bg-bad/10" : "border-info bg-info/10"}`}>
-          <div className="flex items-center justify-between gap-3">
+      {/* Subscription banner — countdown + 5-day reminder */}
+      {data.subscription.state !== "paid" || data.subscription.reminder ? (
+        <div className={`mt-4 rounded-2xl border p-4 ${data.subscription.state === "expired" ? "border-bad bg-bad/10" : data.subscription.reminder ? "border-warn bg-warn/10" : "border-info bg-info/10"}`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm">
               {data.subscription.state === "expired" ? (
                 <><span className="font-bold text-bad">Trial ended.</span> <span className="text-dim">Bills can&apos;t be created or verified until the plan is paid.</span></>
+              ) : data.subscription.state === "trial" ? (
+                <><span className="font-bold">Free trial.</span> <span className="text-dim">
+                  {data.subscription.days_left} day{data.subscription.days_left === 1 ? "" : "s"} left
+                  {data.subscription.days_left > 0 ? ` — ends ${fmtDate(data.subscription.end)}` : " tonight"}.</span></>
               ) : (
-                <><span className="font-bold">Free trial.</span> <span className="text-dim">{data.subscription.days_left} day{data.subscription.days_left === 1 ? "" : "s"} left.</span></>
+                <><span className="font-bold text-warn">Renewal due soon.</span> <span className="text-dim">Plan expires in {data.subscription.days_left} day{data.subscription.days_left === 1 ? "" : "s"} ({fmtDate(data.subscription.end)}).</span></>
               )}
             </div>
-            <Link href="/pay" className="shrink-0 rounded-xl bg-plum px-4 py-2 text-sm font-bold text-white">
+            <Link href="/pay" className="shrink-0 rounded-xl bg-plum px-4 py-2 text-center text-sm font-bold text-white">
               {data.subscription.state === "expired" ? "Pay now" : "View billing"}
             </Link>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Revenue hero */}
       <div className="mt-5 rounded-3xl border border-line bg-gradient-to-br from-[#fff5f3] via-surface to-[#f6eff5] p-6 text-center shadow-[0_16px_40px_-24px_rgba(93,58,88,0.4)]">
@@ -174,7 +195,97 @@ export default function OwnerDash() {
           <div className="h-full rounded-full bg-brand" style={{ width: `${usagePct}%` }} />
         </div>
         {data.plan_usage.remaining === 0 && (
-          <p className="mt-2 text-sm text-warn">⚠ Cap reached — new verifications are blocked. Upgrade in Pricing.</p>
+          <p className="mt-2 text-sm text-warn">⚠ Cap reached — new verifications are blocked. Upgrade in Billing.</p>
+        )}
+      </div>
+
+      {/* Analytics */}
+      {analyticsData && (
+        <>
+          <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-display font-bold">Revenue — last 14 days</h2>
+              {analyticsData.month.mom_pct !== null && (
+                <span className={`text-sm font-semibold ${analyticsData.month.mom_pct >= 0 ? "text-good" : "text-bad"}`}>
+                  {analyticsData.month.mom_pct >= 0 ? "↑" : "↓"} {Math.abs(analyticsData.month.mom_pct)}% vs last month
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-dim">
+              This month {money(analyticsData.month.this)} · last month {money(analyticsData.month.last)}
+            </p>
+            <TrendChart series={analyticsData.trend.series} labels={analyticsData.trend.labels} />
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-line bg-surface p-4">
+              <h2 className="font-display font-bold">Staff this month</h2>
+              {analyticsData.staff.length === 0 && <p className="mt-2 text-sm text-dim">No bills yet this month.</p>}
+              {analyticsData.staff.map((s, i) => (
+                <div key={s.staff_name} className="mt-3">
+                  <div className="flex items-baseline justify-between text-sm">
+                    <span className="font-semibold">{i === 0 && s.collected > 0 ? "👑 " : ""}{s.staff_name}</span>
+                    <span className="tabular-nums"><span className="font-bold">{money(s.collected)}</span> <span className="text-xs text-dim">· {s.bills} bills · {s.verify_rate}% verified</span></span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface2">
+                    <div className="h-full rounded-full bg-brand" style={{ width: `${pct(s.collected, analyticsData.staff[0]?.collected)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-2xl border border-line bg-surface p-4">
+              <h2 className="font-display font-bold">Top services</h2>
+              {analyticsData.top_services.length === 0 && <p className="mt-2 text-sm text-dim">No paid services yet this month.</p>}
+              {analyticsData.top_services.map((s, i) => (
+                <div key={s.name} className="mt-3">
+                  <div className="flex items-baseline justify-between text-sm">
+                    <span className="font-semibold">{s.name} <span className="text-xs font-normal text-dim">× {s.count}</span></span>
+                    <span className="font-bold tabular-nums">{money(s.revenue)}</span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface2">
+                    <div className="h-full rounded-full bg-plum" style={{ width: `${pct(s.revenue, analyticsData.top_services[0]?.revenue)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
+            <h2 className="font-display font-bold">Verification funnel — this month</h2>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <FunnelStep label="Created" value={analyticsData.funnel.created} max={analyticsData.funnel.created} tone="bg-info" />
+              <FunnelStep label="Verified" value={analyticsData.funnel.verified} max={analyticsData.funnel.created} tone="bg-brand" />
+              <FunnelStep label="Paid" value={analyticsData.funnel.paid} max={analyticsData.funnel.created} tone="bg-good" />
+            </div>
+            <p className="mt-2 text-xs text-dim">
+              {analyticsData.funnel.created - analyticsData.funnel.verified > 0
+                ? `${analyticsData.funnel.created - analyticsData.funnel.verified} bill(s) still awaiting customer verification.`
+                : "Every bill so far was seen by a customer ✓"}
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Team — invites */}
+      <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
+        <h2 className="font-display font-bold">Team</h2>
+        <p className="text-xs text-dim">Staff sign in with a link you create here — no passwords to forget.</p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Staff name (e.g. Faith)"
+            className="flex-1 rounded-xl border border-line bg-surface2 px-3 py-2.5 outline-none focus:border-brand" />
+          <button onClick={createInvite} disabled={!inviteName.trim()}
+            className="rounded-xl bg-plum px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">Create invite link</button>
+        </div>
+        {inviteUrl && (
+          <div className="mt-3 rounded-xl border border-brand bg-brand/10 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-dim">Share this link with {`the staff member`} (one-time use):</p>
+            <div className="mt-1 flex items-center gap-2">
+              <code className="min-w-0 flex-1 truncate text-sm font-mono">{inviteUrl}</code>
+              <button onClick={() => navigator.clipboard.writeText(inviteUrl).then(() => alert("Link copied — share it on WhatsApp or SMS"))}
+                className="shrink-0 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-bold">Copy</button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -254,6 +365,48 @@ export default function OwnerDash() {
 function greetingTime() {
   const h = new Date().getHours();
   return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
+}
+
+function fmtDate(iso: string | null) {
+  return iso ? new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short" }) : "—";
+}
+
+function pct(v: number, max?: number) {
+  return max && max > 0 ? Math.round((v / max) * 100) : 0;
+}
+
+function TrendChart({ series, labels }: { series: number[]; labels: string[] }) {
+  const max = Math.max(...series, 1);
+  return (
+    <div>
+      <div className="mt-4 flex h-36 items-end gap-[3px] sm:gap-1.5">
+        {series.map((v, i) => (
+          <div key={i} className="group relative flex-1">
+            <div
+              className={`w-full rounded-t-md transition-all ${v > 0 ? "bg-brand/80 group-hover:bg-brand" : "bg-surface2"}`}
+              style={{ height: `${Math.max(4, (v / max) * 136)}px` }}
+            />
+            <div className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-line bg-surface px-2 py-1 text-[10px] font-semibold opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+              {labels[i]}: {money(v)}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-1.5 flex justify-between text-[10px] text-dim">
+        <span>{labels[0]}</span><span className="hidden sm:inline">{labels[6]}</span><span>{labels[labels.length - 1]}</span>
+      </div>
+    </div>
+  );
+}
+
+function FunnelStep({ label, value, max, tone }: { label: string; value: number; max: number; tone: string }) {
+  return (
+    <div className="rounded-xl border border-line bg-surface2 p-3">
+      <div className={`mx-auto mb-2 h-1.5 w-full max-w-[80px] rounded-full ${tone}`} style={{ opacity: max > 0 ? Math.max(0.25, value / max) : 0.25 }} />
+      <div className="font-display text-xl font-bold tabular-nums">{value}</div>
+      <div className="text-[11px] text-dim">{label}</div>
+    </div>
+  );
 }
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" | "bad" }) {

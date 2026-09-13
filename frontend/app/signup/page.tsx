@@ -34,8 +34,7 @@ function SignupInner() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-5 py-10">
-      <h1 className="font-display text-2xl font-bold">Start your 14-day free trial</h1>
+    <main className="mx-auto max-w-md px-5 py-10">       <h1 className="font-display text-2xl font-bold">Start your 7-day free trial</h1>
       <p className="mt-1 text-sm text-dim">No card required. Cancel anytime.</p>
 
       <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-line bg-surface p-5">

@@ -66,6 +66,17 @@ export type Subscription = {
   state: "trial" | "paid" | "expired";
   end: string | null;
   days_left: number;
+  reminder: boolean;
+};
+
+export type Analytics = {
+  trend: { labels: string[]; series: number[] };
+  month: { this: number; last: number; mom_pct: number | null };
+  staff: { staff_name: string; bills: number; collected: number; verified: number; verify_rate: number }[];
+  top_services: { name: string; revenue: number; count: number }[];
+  funnel: { created: number; verified: number; paid: number };
+  status_counts: Record<string, number>;
+  subscription: Subscription;
 };
 
 export type MpesaPaymentRow = {
@@ -178,6 +189,19 @@ export const api = {
   mpesaHistory: (slug: string, pin: string) =>
     req<{ payments: MpesaPaymentRow[]; subscription: Subscription }>("/api/mpesa/history/", {
       headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
+    }),
+  analytics: (slug: string, pin: string) =>
+    req<Analytics>("/api/analytics/", { headers: { "X-SP-Business": slug, "X-SP-PIN": pin } }),
+  inviteCreate: (slug: string, pin: string, name: string) =>
+    req<{ code: string; url: string; name: string }>("/api/invites/create/", {
+      method: "POST",
+      headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
+      body: JSON.stringify({ name }),
+    }),
+  inviteAccept: (code: string) =>
+    req<{ business: { name: string; slug: string }; staff: { id: number; name: string } }>("/api/invites/accept/", {
+      method: "POST",
+      body: JSON.stringify({ code }),
     }),
 };
 
