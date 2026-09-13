@@ -11,7 +11,9 @@ export function MpesaTrustStrip({ note }: { note?: string }) {
   return (
     <div className="mt-4 overflow-hidden rounded-2xl border border-[#3AA335]/30 bg-gradient-to-r from-[#eaf7ec] via-[#f2faf3] to-[#e8f6ea] p-3">
       <div className="flex items-center gap-3">
-        <Image src="/mpesa-logo.png" alt="M-Pesa" width={36} height={36} className="h-9 w-9 rounded-lg border border-[#3AA335]/25 bg-white p-1" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#3AA335]/25 bg-white text-[9px] font-black tracking-tight text-[#168a45]">
+          M-PESA
+        </div>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-sm font-bold text-[#0b6e35]">
             <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#3AA335] text-[10px] text-white">✓</span>

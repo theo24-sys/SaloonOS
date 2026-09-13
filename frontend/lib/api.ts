@@ -17,7 +17,7 @@ export type BillEdit = { item_name: string; old_price: number; new_price: number
 export type AuditEv = { code?: string; type: string; detail: string; at: string; staff?: string };
 export type Branding = {
   name: string; tagline: string; phone: string; location: string;
-  accent: "blush" | "rose" | "luxe" | "plum" | "minimal"; thank_you: string;
+  accent: "blush" | "rose" | "luxe" | "plum" | "minimal"; thank_you: string; logo_data_url?: string;
 };
 
 export type Bill = {
@@ -41,7 +41,7 @@ export type Bill = {
 };
 
 export type Catalog = {
-  business: { name: string; slug: string; plan: Plan };
+  business: { name: string; slug: string; plan: Plan; logo_data_url?: string };
   services: { id: number; name: string; default_price: number }[];
   staff: { id: number; name: string; role: string }[];
 };
@@ -204,7 +204,7 @@ export const api = {
     req<{ name: string; slug: string }>("/api/signup/", { method: "POST", body: JSON.stringify(body) }),
   catalog: (slug: string) => req<Catalog>("/api/catalog/", { headers: { "X-SP-Business": slug } }),
   createBill: (slug: string, body: { customer_name: string; staff_id: number; items: BillItem[] }) =>
-    req<Bill>("/api/bills/", { method: "POST", headers: { "X-SP-Business": slug }, body: JSON.stringify(body) }),
+    req<Bill>("/api/bills/", { method: "POST", headers: operatorHeaders(slug), body: JSON.stringify(body) }),
   editBill: (
     slug: string,
     code: string,
@@ -212,7 +212,7 @@ export const api = {
   ) =>
     req<Bill>(`/api/bills/${code}/edit/`, {
       method: "POST",
-      headers: { "X-SP-Business": slug },
+      headers: operatorHeaders(slug),
       body: JSON.stringify(body),
     }),
   getBill: (code: string, slug?: string, noScan?: boolean) =>
@@ -230,7 +230,7 @@ export const api = {
   pay: (slug: string, code: string, method: string) =>
     req<Bill>(`/api/bills/${code}/pay/`, {
       method: "POST",
-      headers: { "X-SP-Business": slug },
+      headers: operatorHeaders(slug),
       body: JSON.stringify({ method }),
     }),
   dashboard: (slug: string, pin: string) =>
@@ -241,7 +241,7 @@ export const api = {
       headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
       body: JSON.stringify({ reason }),
     }),
-  branding: (slug: string, pin: string, body: Partial<{ tagline: string; phone: string; location: string; accent: string; thank_you: string }>) =>
+  branding: (slug: string, pin: string, body: Partial<{ tagline: string; phone: string; location: string; accent: string; thank_you: string; logo_data_url: string }>) =>
     req<Branding>("/api/branding/", {
       method: "POST",
       headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
@@ -270,7 +270,7 @@ export const api = {
       body: JSON.stringify({ name }),
     }),
   inviteAccept: (code: string) =>
-    req<{ business: { name: string; slug: string }; staff: { id: number; name: string } }>("/api/invites/accept/", {
+    req<{ business: { name: string; slug: string }; staff: { id: number; name: string }; token: string }>("/api/invites/accept/", {
       method: "POST",
       body: JSON.stringify({ code }),
     }),
@@ -283,7 +283,7 @@ export const api = {
   redeemScanBill: (slug: string, code: string, receipt: string) =>
     req<Bill>(`/api/mpesa/redeem-bill/`, {
       method: "POST",
-      headers: { "X-SP-Business": slug },
+      headers: operatorHeaders(slug),
       body: JSON.stringify({ code, receipt }),
     }),
   platformOverview: (adminKey: string) =>
@@ -326,4 +326,19 @@ export const store = {
   set pin(v: string) {
     localStorage.setItem("sp_pin", v);
   },
+  get staffToken() {
+    return safeGet("sp_staff_token");
+  },
+  set staffToken(v: string) {
+    if (v) localStorage.setItem("sp_staff_token", v);
+    else localStorage.removeItem("sp_staff_token");
+  },
 };
+
+function operatorHeaders(slug: string): Record<string, string> {
+  return {
+    "X-SP-Business": slug,
+    ...(store.staffToken ? { "X-SP-Staff-Token": store.staffToken } : {}),
+    ...(!store.staffToken && store.pin ? { "X-SP-PIN": store.pin } : {}),
+  };
+}

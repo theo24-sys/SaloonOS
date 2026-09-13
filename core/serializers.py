@@ -22,7 +22,7 @@ class BusinessSerializer(serializers.ModelSerializer):
     class Meta:
         model = Business
         fields = ['id', 'name', 'slug', 'plan', 'tagline', 'phone', 'location',
-                  'accent', 'thank_you']
+                  'accent', 'thank_you', 'logo_data_url']
 
 
 def audit(bill, type_, detail=''):
@@ -47,7 +47,7 @@ class BillBrandingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Business
-        fields = ['name', 'tagline', 'phone', 'location', 'accent', 'thank_you']
+        fields = ['name', 'tagline', 'phone', 'location', 'accent', 'thank_you', 'logo_data_url']
 
 
 class BillSerializer(serializers.ModelSerializer):

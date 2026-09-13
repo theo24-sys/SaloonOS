@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { api, Catalog, store } from "@/lib/api";
 import { Receipt, THEMES, Accent } from "@/app/receipt";
 
@@ -17,6 +18,7 @@ export default function Settings() {
   const [location, setLocation] = useState("");
   const [accent, setAccent] = useState<Accent>("blush");
   const [thankYou, setThankYou] = useState("");
+  const [logo, setLogo] = useState("");
 
   useEffect(() => {
     api.catalog(store.slug).then((c) => {
@@ -29,6 +31,7 @@ export default function Settings() {
       setLocation(b.location || "");
       setAccent(b.accent || "blush");
       setThankYou(b.thank_you || "");
+      setLogo(b.logo_data_url || "");
     }).catch((e) => setErr(e.message));
   }, []);
 
@@ -36,7 +39,7 @@ export default function Settings() {
     e.preventDefault();
     setErr(""); setSaved(false); setBusy(true);
     try {
-      await api.branding(store.slug, pin, { tagline, phone, location, accent, thank_you: thankYou });
+      await api.branding(store.slug, pin, { tagline, phone, location, accent, thank_you: thankYou, logo_data_url: logo });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e2) {
@@ -63,6 +66,37 @@ export default function Settings() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-8">
       <div className="flex items-center justify-between">
+        <div>
+          <label className="text-sm font-semibold text-dim">Salon logo</label>
+          <div className="mt-2 flex items-center gap-3">
+            {logo ? (
+              <Image src={logo} alt="Salon logo preview" width={56} height={56} unoptimized className="h-14 w-14 rounded-xl border border-line object-cover" />
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-dashed border-line text-xs text-dim">No logo</div>
+            )}
+            <label className="cursor-pointer rounded-xl border border-line bg-surface2 px-3 py-2 text-xs font-semibold hover:border-brand">
+              Upload image
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 500_000) {
+                    setErr("Logo must be smaller than 500 KB");
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = () => setLogo(String(reader.result));
+                  reader.readAsDataURL(file);
+                }}
+              />
+            </label>
+            {logo && <button type="button" onClick={() => setLogo("")} className="text-xs font-semibold text-bad">Remove</button>}
+          </div>
+          <p className="mt-1 text-xs text-dim">PNG, JPG or WebP · max 500 KB · shown on customer receipts</p>
+        </div>
         <div>
           <h1 className="font-display text-2xl font-bold">Appearance</h1>
           <p className="text-sm text-dim">Make receipts feel like your salon&apos;s — the verified stamp stays ours.</p>

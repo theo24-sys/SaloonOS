@@ -3,6 +3,7 @@ import { Playfair_Display, Jost } from "next/font/google";
 import Image from "next/image";
 import "./globals.css";
 import Link from "next/link";
+import { LogoutButton } from "@/app/logout-button";
 
 const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"] });
 const jost = Jost({ variable: "--font-jost", subsets: ["latin"] });
@@ -47,6 +48,7 @@ export default function RootLayout({
               <Link href="/pricing" className="hover:text-ink">Pricing</Link>
               <Link href="/owner" className="hover:text-ink">Owner</Link>
               <Link href="/app" className="hover:text-plum">Staff POS</Link>
+              <LogoutButton />
               <Link href="/signup" className="rounded-full bg-plum px-3 py-1.5 font-semibold text-white sm:px-4">
                 Start free
               </Link>

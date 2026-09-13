@@ -34,6 +34,7 @@ class Business(models.Model):
     location = models.CharField(max_length=120, blank=True)
     accent = models.CharField(max_length=10, default='blush')  # blush|rose|luxe|plum|minimal
     thank_you = models.CharField(max_length=150, default='Thank you for choosing us ♡')
+    logo_data_url = models.TextField(blank=True, default='')
 
     TRIAL_DAYS = 7
 
@@ -163,6 +164,15 @@ class StaffInvite(models.Model):
 
     def __str__(self):
         return f"invite:{self.code} {self.name}@{self.business.slug} used={self.used}"
+
+
+class StaffSession(models.Model):
+    """Revocable device session created when a staff invite is accepted."""
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='staff_sessions')
+    staff = models.ForeignKey(StaffMember, on_delete=models.CASCADE, related_name='sessions')
+    token_hash = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
 
 
 class MpesaPayment(models.Model):

@@ -61,6 +61,7 @@ export default function StaffApp() {
       .then((r) => {
         store.slug = r.business.slug;
         setInvite({ code, name: r.staff.name });
+        store.staffToken = r.token;
         setInviteMsg(`Welcome, ${r.staff.name} — you're signed in to ${r.business.name}.`);
         window.history.replaceState({}, "", "/app");
         load();
@@ -382,6 +383,7 @@ export default function StaffApp() {
                 const slug = switchSlug.trim().toLowerCase();
                 if (!slug) return;
                 store.slug = slug;
+                store.staffToken = "";
                 setSwitchOpen(false);
                 load();
               }}

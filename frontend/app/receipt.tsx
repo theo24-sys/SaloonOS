@@ -1,6 +1,7 @@
 "use client";
 
 import { money } from "@/lib/api";
+import Image from "next/image";
 
 /* ---------- Receipt themes (owner picks one; trust elements stay fixed) ---------- */
 
@@ -54,6 +55,7 @@ export const THEMES: Record<Accent, Theme> = {
 export type Branding = {
   name: string; tagline: string; phone: string; location: string;
   accent: string; thank_you: string;
+  logo_data_url?: string;
 };
 
 export type ReceiptBill = {
@@ -105,6 +107,9 @@ export function Receipt({
       {/* Header */}
       <div className={`${t.panel} px-6 pb-5 pt-7 text-center`}>
         <div className={`text-2xl ${t.accent}`}>✦</div>
+        {branding.logo_data_url && (
+          <Image src={branding.logo_data_url} alt="" width={64} height={64} unoptimized className="mx-auto mb-2 h-16 w-16 rounded-2xl object-cover" />
+        )}
         <h1 className={`font-display mt-1 text-2xl font-bold uppercase leading-tight tracking-[0.08em] ${t.ink}`}>
           {branding.name}
         </h1>

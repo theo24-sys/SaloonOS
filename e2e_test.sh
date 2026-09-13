@@ -47,18 +47,20 @@ check "5th staff blocked with 402" 'Upgrade' "$A5"
 
 echo "== create bill =="
 BILL=$(curl -s -X POST $B/bills -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' \
+  -H 'X-SP-PIN: 4321' \
   -d "{\"customer_name\":\"Alice\",\"staff_id\":$STAFF_ID,\"items\":[{\"name\":\"Braids\",\"price\":2500},{\"name\":\"Wash\",\"price\":300}]}")
 check "bill pending" '"status":"pending"' "$BILL"
 CODE=$(echo "$BILL" | python3 -c "import sys,json;print(json.load(sys.stdin)['code'])")
 echo "  code=$CODE"
 
 echo "== guard: pay before verify =="
-G=$(curl -s -X POST $B/bills/$CODE/pay -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' -d '{"method":"M-Pesa"}')
+G=$(curl -s -X POST $B/bills/$CODE/pay -H "X-SP-Business: $SLUG" -H 'X-SP-PIN: 4321' -H 'Content-Type: application/json' -d '{"method":"M-Pesa"}')
 check "pay blocked" 'not verified' "$G"
 
 echo "== edit while pending (audit) =="
 ITEM_ID=$(echo "$BILL" | python3 -c "import sys,json;print(json.load(sys.stdin)['items'][0]['id'])")
 E=$(curl -s -X POST $B/bills/$CODE/edit -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' \
+  -H 'X-SP-PIN: 4321' \
   -d "{\"staff_id\":$STAFF_ID,\"reason\":\"Customer discount\",\"changes\":[{\"item_id\":$ITEM_ID,\"new_price\":2000}]}")
 check "edit logged" 'Customer discount' "$E"
 check "total updated" '"total":2300' "$E"
@@ -66,15 +68,16 @@ check "total updated" '"total":2300' "$E"
 echo "== guard: edit after approval =="
 curl -s -X POST $B/bills/$CODE/verify -H 'Content-Type: application/json' -d '{"dispute":false,"note":""}' >/dev/null
 E2=$(curl -s -X POST $B/bills/$CODE/edit -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' \
+  -H 'X-SP-PIN: 4321' \
   -d "{\"staff_id\":$STAFF_ID,\"reason\":\"x\",\"changes\":[{\"item_id\":$ITEM_ID,\"new_price\":1}]}")
 check "edit blocked once approved" 'no longer be edited' "$E2"
 
 echo "== pay after approval =="
-PAY=$(curl -s -X POST $B/bills/$CODE/pay -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' -d '{"method":"M-Pesa"}')
+PAY=$(curl -s -X POST $B/bills/$CODE/pay -H "X-SP-Business: $SLUG" -H 'X-SP-PIN: 4321' -H 'Content-Type: application/json' -d '{"method":"M-Pesa"}')
 check "paid" '"status":"paid"' "$PAY"
 
 echo "== guard: double pay =="
-P2=$(curl -s -X POST $B/bills/$CODE/pay -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' -d '{}')
+P2=$(curl -s -X POST $B/bills/$CODE/pay -H "X-SP-Business: $SLUG" -H 'X-SP-PIN: 4321' -H 'Content-Type: application/json' -d '{}')
 check "double pay blocked" 'Bill is paid' "$P2"
 
 echo "== guard: void paid bill =="
@@ -94,6 +97,7 @@ check "audit feed has edited" '"type":"edited"' "$DASH"
 echo "== verified-bill cap =="
 # create a 2nd bill while still on Starter…
 B2=$(curl -s -X POST $B/bills -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' \
+  -H 'X-SP-PIN: 4321' \
   -d "{\"customer_name\":\"Bob\",\"staff_id\":$STAFF_ID,\"items\":[{\"name\":\"Cut\",\"price\":500}]}")
 C2=$(echo "$B2" | python3 -c "import sys,json;print(json.load(sys.stdin)['code'])")
 echo "  code=$C2"

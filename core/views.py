@@ -1,6 +1,8 @@
 import calendar
+import hashlib
 import random
 import re
+import secrets
 import string
 from datetime import timedelta
 
@@ -14,7 +16,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 
 from .models import (Plan, Business, StaffMember, Service, Bill, BillItem,
-                     BillEdit, AuditEvent, MpesaPayment, StaffInvite)
+                     BillEdit, AuditEvent, MpesaPayment, StaffInvite, StaffSession)
 from .mpesa import DarajaError, stk_push, stk_query, normalize_phone
 from .serializers import (PlanSerializer, BusinessSerializer, BillSerializer,
                           ServiceSerializer, StaffSerializer, audit)
@@ -55,6 +57,22 @@ def require_owner_pin(request, business):
     pin = request.headers.get('X-SP-PIN', '')
     if pin != business.owner_pin:
         raise Unauthorized('Invalid owner PIN')
+
+
+def require_operator(request, business):
+    """Allow a verified owner or an active invited staff session."""
+    if request.headers.get('X-SP-PIN', '') == business.owner_pin:
+        return None
+    token = request.headers.get('X-SP-Staff-Token', '')
+    if token:
+        session = StaffSession.objects.select_related('staff').filter(
+            business=business,
+            token_hash=hashlib.sha256(token.encode()).hexdigest(),
+            revoked_at__isnull=True,
+        ).first()
+        if session:
+            return session.staff
+    raise Unauthorized('Sign in with your staff invite or owner PIN')
 
 
 def gen_code():
@@ -122,6 +140,11 @@ def branding(request):
             if field == 'accent' and val not in ('blush', 'rose', 'luxe', 'plum', 'minimal'):
                 return Response({'error': 'Unknown accent'}, status=http.HTTP_400_BAD_REQUEST)
             setattr(biz, field, val)
+    if 'logo_data_url' in request.data:
+        logo = str(request.data.get('logo_data_url') or '')
+        if logo and (not logo.startswith('data:image/') or len(logo) > 700_000):
+            raise Invalid('Logo must be an image smaller than 500 KB')
+        biz.logo_data_url = logo
     biz.save()
     return Response(BusinessSerializer(biz).data)
 
@@ -171,6 +194,7 @@ def verified_count_this_month(biz):
 @transaction.atomic
 def create_bill(request):
     biz = get_business(request)
+    operator = require_operator(request, biz)
     customer = (request.data.get('customer_name') or '').strip()
     staff_id = request.data.get('staff_id')
     items = request.data.get('items') or []
@@ -178,7 +202,7 @@ def create_bill(request):
         return Response({'error': 'customer_name, staff_id, items required'},
                         status=http.HTTP_400_BAD_REQUEST)
 
-    staff = biz.staff.filter(id=staff_id).first()
+    staff = operator or biz.staff.filter(id=staff_id).first()
     if not staff:
         return Response({'error': 'Unknown staff member'}, status=http.HTTP_400_BAD_REQUEST)
 
@@ -217,13 +241,14 @@ def edit_bill(request, code):
     """Edit a pending bill's item prices. Every change is logged with a reason.
     Approved+ bills are immutable — void & re-create instead."""
     biz = get_business(request)
+    operator = require_operator(request, biz)
     bill = Bill.objects.select_related('business').filter(code=code, business=biz).first()
     if not bill:
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
     if bill.status != 'pending':
         raise Conflict(f"Bill is {bill.status} — it can no longer be edited. Void it and create a new one.")
 
-    staff = biz.staff.filter(id=request.data.get('staff_id')).first()
+    staff = operator or biz.staff.filter(id=request.data.get('staff_id')).first()
     reason = str(request.data.get('reason') or '').strip()
     for change in request.data.get('changes') or []:
         item = bill.items.filter(id=change.get('item_id')).first()
@@ -286,7 +311,9 @@ def verify_bill(request, code):
 @api_view(['POST'])
 @permission_classes([])
 def pay_bill(request, code):
-    bill = Bill.objects.filter(code=code).first()
+    biz = get_business(request)
+    require_operator(request, biz)
+    bill = Bill.objects.filter(code=code, business=biz).first()
     if not bill:
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
     if bill.status == 'pending':
@@ -710,12 +737,19 @@ def invite_accept(request):
         return Response({'error': 'This invite link is invalid or already used.'},
                         status=http.HTTP_400_BAD_REQUEST)
     member, created = StaffMember.objects.get_or_create(business=inv.business, name=inv.name)
+    raw_token = secrets.token_urlsafe(32)
+    StaffSession.objects.create(
+        business=inv.business,
+        staff=member,
+        token_hash=hashlib.sha256(raw_token.encode()).hexdigest(),
+    )
     inv.used = True
     inv.used_at = timezone.now()
     inv.save(update_fields=['used', 'used_at'])
     return Response({
         'business': {'name': inv.business.name, 'slug': inv.business.slug},
         'staff': {'id': member.id, 'name': member.name},
+        'token': raw_token,
     }, status=http.HTTP_201_CREATED)
 
 
@@ -983,4 +1017,3 @@ def platform_admin_payments(request):
         'completed_at': p.completed_at,
     } for p in payments]
     return Response({'payments': data})
-
