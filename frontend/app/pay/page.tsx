@@ -82,13 +82,19 @@ export default function BillingPage() {
   async function pay(e: React.FormEvent) {
     e.preventDefault();
     setLockErr("");
+    const digits = phone.replace(/\D/g, "");
+    if (!/^(?:0?254|254)?[17]\d{8}$/.test(digits) && !/^0[17]\d{8}$/.test(digits)) {
+      setLockErr("Enter a valid Safaricom number, for example 0712 345 678.");
+      return;
+    }
     try {
       const r = await api.stkInitiate(store.slug, store.pin, { phone, cycle, plan_code: planCode || undefined });
       setStatusMsg(r.message);
       setPhase("waiting");
       startPolling(r.payment_id);
     } catch (err) {
-      setLockErr((err as Error).message);
+      setStatusMsg((err as Error).message);
+      setPhase("error");
     }
   }
 
@@ -145,7 +151,7 @@ export default function BillingPage() {
         <Link href="/owner" className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-dim transition hover:border-brand hover:text-ink">← Dashboard</Link>
       </div>
 
-      <MpesaTrustStrip note="Official Safaricom Daraja payments · your PIN stays private" />
+      <MpesaTrustStrip note="Approve the payment on your phone · your PIN stays private" />
 
       {sub && (
         <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
@@ -167,16 +173,17 @@ export default function BillingPage() {
           <div className="mt-3 grid grid-cols-2 gap-2">
             {plans.map((p) => (
               <button type="button" key={p.code} onClick={() => setPlanCode(p.code)}
-                className={`rounded-xl border p-3 text-left text-sm ${planCode === p.code || (!planCode && p.code === currentPlan) ? "border-brand bg-brand/10" : "border-line bg-surface2"}`}>
-                <div className="font-semibold">{p.name}{p.code === currentPlan && <span className="ml-1 text-xs text-dim">(current)</span>}</div>
-                <div className="text-dim">{money(cycle === "annual" ? p.price_annual : p.price_monthly)} / {cycle === "annual" ? "yr" : "mo"}</div>
+                className={`plan-choice ${planCode === p.code || (!planCode && p.code === currentPlan) ? "is-selected" : ""}`}>
+                <span className="plan-choice-dot" />
+                <span className="plan-choice-name">{p.name}{p.code === currentPlan && <small>Current</small>}</span>
+                <strong>{money(cycle === "annual" ? p.price_annual : p.price_monthly)} <small>/ {cycle === "annual" ? "year" : "month"}</small></strong>
               </button>
             ))}
           </div>
           <div className="mt-3 flex gap-2">
             {(["monthly", "annual"] as Cycle[]).map((c) => (
               <button type="button" key={c} onClick={() => setCycle(c)}
-                className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold ${cycle === c ? "border-brand bg-brand/10 text-ink" : "border-line bg-surface2 text-dim"}`}>
+                className={`cycle-choice ${cycle === c ? "is-selected" : ""}`}>
                 {c === "monthly" ? "Monthly" : "Annual · 2 months free"}
               </button>
             ))}
@@ -226,7 +233,7 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* Scan-to-pay — the official Daraja QR sticker, for those who prefer
+      {/* Scan-to-pay — the official QR sticker, for those who prefer
           paying from their M-Pesa app without an STK prompt. */}
       <MpesaScanTile />
 

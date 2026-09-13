@@ -12,7 +12,7 @@ export function MpesaTrustStrip({ note }: { note?: string }) {
         <div><strong>M-PESA</strong><small>by Safaricom</small></div>
       </div>
       <div className="mpesa-trust-copy"><p><span className="trust-check">✓</span> Secure mobile payment</p><small>{note || "You approve every payment on your phone. Your M-Pesa PIN stays private."}</small></div>
-      <div className="mpesa-secure-badge"><Image src="/safaricom-logo.jpeg" alt="Safaricom" width={120} height={81} /> <span>Daraja protected</span></div>
+      <div className="mpesa-secure-badge"><Image src="/safaricom-logo.jpeg" alt="Safaricom" width={120} height={81} /> <span>Safaricom secure</span></div>
     </div>
   );
 }

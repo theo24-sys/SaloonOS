@@ -41,6 +41,21 @@ services:
         sync: false
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+      # Configure these with the live Safaricom merchant credentials in Render.
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_SHORTCODE
+        sync: false
+      - key: MPESA_CALLBACK_URL
+        sync: false
+      - key: MPESA_ENVIRONMENT
+        value: "production"
+      - key: MPESA_SIMULATE
+        value: "0"
 
   - type: web
     name: saloonos-web
