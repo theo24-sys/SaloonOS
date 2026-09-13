@@ -26,6 +26,7 @@ function BillLines({ items, total }: { items: BillItem[]; total: number }) {
 export default function StaffApp() {
   const [cat, setCat] = useState<Catalog | null>(null);
   const [customer, setCustomer] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [staffId, setStaffId] = useState<number | "">("");
   const [items, setItems] = useState<BillItem[]>([{ name: "", price: 0 }, { name: "", price: 0 }]);
   const [bill, setBill] = useState<Bill | null>(null);
@@ -106,6 +107,7 @@ export default function StaffApp() {
     try {
       const b = await api.createBill(store.slug, {
         customer_name: customer,
+        customer_phone: customerPhone,
         staff_id: Number(staffId),
         items: items.filter((it) => it.name.trim()),
       });
@@ -160,6 +162,7 @@ export default function StaffApp() {
   function reset() {
     setBill(null);
     setCustomer("");
+    setCustomerPhone("");
     setItems([{ name: "", price: 0 }, { name: "", price: 0 }]);
   }
 
@@ -180,17 +183,8 @@ export default function StaffApp() {
               : err}
           </p>
           <div className="mt-6 flex flex-col gap-2">
-            <Link
-              href="/signup"
-              className="rounded-xl bg-plum px-4 py-2.5 font-bold text-white transition hover:bg-[#4d2f48]"
-            >
-              Start 7-day free trial
-            </Link>
-            <Link
-              href="/pricing"
-              className="rounded-xl border border-line bg-surface2 px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-brand"
-            >
-              View pricing plans
+            <Link href="/" className="rounded-xl bg-plum px-4 py-2.5 font-bold text-white transition hover:bg-[#4d2f48]">
+              Return to sign in
             </Link>
           </div>
         </div>
@@ -271,6 +265,13 @@ export default function StaffApp() {
               value={customer}
               onChange={(e) => setCustomer(e.target.value)}
               placeholder="Customer name"
+              className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 outline-none focus:border-brand"
+            />
+            <input
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              placeholder="Customer phone number (optional)"
+              inputMode="tel"
               className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 outline-none focus:border-brand"
             />
             <select

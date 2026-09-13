@@ -64,7 +64,7 @@ class BillSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Bill
-        fields = ['id', 'code', 'customer_name', 'status', 'total', 'staff', 'staff_name',
+        fields = ['id', 'code', 'customer_name', 'customer_phone', 'status', 'total', 'staff', 'staff_name',
                   'payment_method', 'payment_ref', 'dispute_note', 'approved_at', 'paid_at',
                   'created_at', 'items', 'edits', 'events', 'qr_data_url', 'verify_url', 'business']
 

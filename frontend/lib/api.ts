@@ -24,6 +24,7 @@ export type Bill = {
   id: number;
   code: string;
   customer_name: string;
+  customer_phone: string;
   status: "draft" | "pending" | "approved" | "paid" | "disputed" | "voided" | "refunded";
   total: number;
   staff_name: string;
@@ -204,7 +205,7 @@ export const api = {
   signup: (body: { name: string; plan_code: string; owner_pin: string }) =>
     req<{ name: string; slug: string }>("/api/signup/", { method: "POST", body: JSON.stringify(body) }),
   catalog: (slug: string) => req<Catalog>("/api/catalog/", { headers: { "X-SP-Business": slug } }),
-  createBill: (slug: string, body: { customer_name: string; staff_id: number; items: BillItem[] }) =>
+  createBill: (slug: string, body: { customer_name: string; customer_phone: string; staff_id: number; items: BillItem[] }) =>
     req<Bill>("/api/bills/", { method: "POST", headers: operatorHeaders(slug), body: JSON.stringify(body) }),
   editBill: (
     slug: string,

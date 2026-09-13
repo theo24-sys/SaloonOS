@@ -107,6 +107,7 @@ class Bill(models.Model):
     business = models.ForeignKey(Business, on_delete=models.PROTECT, related_name='bills')
     code = models.CharField(max_length=12, unique=True)   # customer-facing reference
     customer_name = models.CharField(max_length=80)
+    customer_phone = models.CharField(max_length=20, blank=True, default='')
     staff = models.ForeignKey(StaffMember, on_delete=models.PROTECT)
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='draft')
     total = models.IntegerField(default=0)

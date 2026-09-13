@@ -196,6 +196,7 @@ def create_bill(request):
     biz = get_business(request)
     operator = require_operator(request, biz)
     customer = (request.data.get('customer_name') or '').strip()
+    customer_phone = (request.data.get('customer_phone') or '').strip()
     staff_id = request.data.get('staff_id')
     items = request.data.get('items') or []
     if not customer or not staff_id or not items:
@@ -216,6 +217,7 @@ def create_bill(request):
 
     bill = Bill.objects.create(
         business=biz, code=gen_code(), customer_name=customer,
+        customer_phone=customer_phone,
         staff=staff, status='pending', total=0)
     total = 0
     for it in items:
