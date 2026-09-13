@@ -14,53 +14,55 @@ export default function Pricing() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-10">
-      <h1 className="font-display text-3xl font-bold">Simple pricing, in KSh</h1>
-      <p className="mt-2 text-dim">
+    <main className="mx-auto max-w-6xl px-[18px] py-14 sm:px-6 sm:py-20">
+      <div className="mx-auto max-w-3xl text-center">
+      <div className="eyebrow">Simple, honest pricing</div>
+      <h1 className="mt-4 font-display text-5xl font-semibold leading-[.98] tracking-[-.045em] sm:text-6xl">Pick the pace that fits your <em>chair count.</em></h1>
+      <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-dim">
         Basic trust is never crippled: every plan includes full customer QR verification.
         You pay for scale and management, not honesty.
       </p>
 
-      <div className="mt-5 flex items-center gap-3 text-sm font-semibold">
+      <div className="mt-7 inline-flex rounded-full border border-line bg-white/60 p-1 text-sm font-bold shadow-sm">
         <button
           onClick={() => setAnnual(false)}
-          className={`rounded-full px-4 py-1.5 ${!annual ? "bg-plum text-white" : "border border-line bg-surface text-dim"}`}
+          className={`rounded-full px-5 py-2 transition ${!annual ? "bg-plum text-white" : "text-dim hover:text-ink"}`}
         >
           Monthly
         </button>
         <button
           onClick={() => setAnnual(true)}
-          className={`rounded-full px-4 py-1.5 ${annual ? "bg-plum text-white" : "border border-line bg-surface text-dim"}`}
+          className={`rounded-full px-5 py-2 transition ${annual ? "bg-plum text-white" : "text-dim hover:text-ink"}`}
         >
           Annual · 2 months free
         </button>
-      </div>
+      </div></div>
 
       {err && <p className="mt-4 text-bad">{err}</p>}
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {plans.map((p) => (
           <div
             key={p.code}
-            className={`relative rounded-2xl border bg-surface p-5 ${
-              p.is_target ? "border-brand" : "border-line"
+            className={`relative flex flex-col rounded-2xl border bg-white/80 p-6 shadow-[0_14px_35px_-28px_rgba(76,41,72,.5)] transition hover:-translate-y-1 ${
+              p.is_target ? "border-brand ring-1 ring-brand/15" : "border-line"
             }`}
           >
             {p.is_target && (
               <div className="absolute -top-2.5 left-5 rounded-full bg-plum px-2.5 py-0.5 text-xs font-bold text-white">
-                ⭐ Most popular
+                Most popular
               </div>
             )}
-            <div className="font-extrabold">{p.name}</div>
-            <div className="text-xs text-dim">{p.tagline}</div>
-            <div className="mt-3 text-2xl font-extrabold">
+            <div className="text-xs font-extrabold uppercase tracking-[.14em] text-brand2">{p.name}</div>
+            <div className="mt-2 min-h-10 text-sm text-dim">{p.tagline}</div>
+            <div className="mt-5 font-display text-4xl font-semibold tracking-[-.04em]">
               {money(annual ? p.price_annual : p.price_monthly)}
               <span className="text-sm font-semibold text-dim">/{annual ? "yr" : "mo"}</span>
             </div>
-            <div className="mt-1 text-xs text-dim">
+            <div className="mt-2 rounded-lg bg-surface2 px-3 py-2 text-xs font-semibold text-ink">
               {p.monthly_verified_bills.toLocaleString()} verified bills/mo · {p.max_staff >= 20 ? "20+ staff" : `${p.max_staff} staff`}
             </div>
-            <ul className="mt-3 space-y-1 text-sm">
+            <ul className="mt-5 flex-1 space-y-2.5 text-sm text-dim">
               {p.features.map((f) => (
                 <li key={f} className="flex gap-2">
                   <span className="text-brand">✓</span> {f}
@@ -69,8 +71,8 @@ export default function Pricing() {
             </ul>
             <Link
               href={`/signup?plan=${p.code}`}
-              className={`mt-4 block rounded-xl px-4 py-2.5 text-center font-bold ${
-                p.is_target ? "bg-plum text-white" : "border border-line bg-surface2 hover:border-dim"
+              className={`mt-7 block rounded-full px-4 py-3 text-center text-sm font-extrabold transition hover:-translate-y-0.5 ${
+                p.is_target ? "bg-plum text-white hover:bg-[#382039]" : "border border-line2 bg-surface2 text-ink hover:border-brand"
               }`}
             >               Start 7 days free
             </Link>
@@ -78,7 +80,7 @@ export default function Pricing() {
         ))}
       </div>
 
-      <p className="mt-6 text-center text-sm text-dim">         7-day free trial — no card required. Experience the full loop:
+      <p className="mx-auto mt-10 max-w-2xl rounded-xl border border-line bg-white/50 p-4 text-center text-sm text-dim">         <span className="font-bold text-ink">No card required.</span> Experience the full loop:
         service → bill → QR → customer verifies → payment → receipt.
       </p>
     </main>

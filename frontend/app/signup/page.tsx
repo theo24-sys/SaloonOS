@@ -34,17 +34,19 @@ function SignupInner() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-5 py-10">       <h1 className="font-display text-2xl font-bold">Start your 7-day free trial</h1>
-      <p className="mt-1 text-sm text-dim">No card required. Cancel anytime.</p>
+    <main className="mx-auto grid max-w-5xl gap-12 px-[18px] py-14 sm:px-6 sm:py-20 lg:grid-cols-[.8fr_1.2fr] lg:items-center">
+      <div><div className="eyebrow">Your first step to calmer books</div><h1 className="mt-4 font-display text-5xl font-semibold leading-[.98] tracking-[-.045em] sm:text-6xl">Open your <em>salon&apos;s</em> control room.</h1><p className="mt-5 max-w-md text-base leading-7 text-dim">Set up your business once. Then send your team to work with bills, QR verification and receipts already in place.</p><div className="mt-8 space-y-4 text-sm"><div className="flex gap-3"><span className="check-icon shrink-0">✓</span><span><strong className="text-ink">Full access for 7 days.</strong><br /><span className="text-dim">Explore the owner dashboard before you commit.</span></span></div><div className="flex gap-3"><span className="check-icon shrink-0">✓</span><span><strong className="text-ink">No card, no hidden setup.</strong><br /><span className="text-dim">Choose a plan now, pay only when you&apos;re ready.</span></span></div></div></div>
 
-      <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-line bg-surface p-5">
+      <form onSubmit={submit} className="rounded-2xl border border-line bg-white/85 p-6 shadow-[0_22px_50px_-32px_rgba(76,41,72,.55)] sm:p-8">
+        <div className="flex items-center justify-between"><div><div className="text-xs font-extrabold uppercase tracking-[.14em] text-brand2">01 / 02</div><h2 className="mt-2 font-display text-2xl font-semibold">Create your workspace</h2></div><div className="rounded-full bg-surface2 px-3 py-1.5 text-[11px] font-bold text-dim">7-day free trial</div></div>
+        <div className="mt-7 space-y-5">
         <div>
           <label className="text-sm font-semibold text-dim">Salon / barber name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. XYZ Salon"
-            className="mt-1 w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 outline-none focus:border-brand"
+            className="mt-2 w-full rounded-xl border border-line bg-bg px-4 py-3 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10"
             required
           />
         </div>
@@ -53,7 +55,7 @@ function SignupInner() {
           <select
             value={planCode}
             onChange={(e) => setPlanCode(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 outline-none focus:border-brand"
+            className="mt-2 w-full rounded-xl border border-line bg-bg px-4 py-3 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10"
           >
             <option value="starter">Starter — KSh 299/mo</option>
             <option value="growth">Growth ⭐ — KSh 499/mo</option>
@@ -68,20 +70,20 @@ function SignupInner() {
             onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
             inputMode="numeric"
             placeholder="e.g. 2026"
-            className="mt-1 w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 tracking-widest outline-none focus:border-brand"
+            className="mt-2 w-full rounded-xl border border-line bg-bg px-4 py-3 tracking-[.3em] outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
             required
             minLength={4}
           />
-        </div>
+        </div></div>
         {err && <p className="text-sm text-bad">{err}</p>}
         <button
           disabled={busy}
-          className="w-full rounded-xl bg-plum px-4 py-3 font-bold text-white transition hover:bg-[#4d2f48] disabled:opacity-50"
+          className="mt-7 w-full rounded-full bg-plum px-4 py-3.5 font-extrabold text-white shadow-[0_14px_24px_-16px_rgba(76,41,72,.8)] transition hover:-translate-y-0.5 hover:bg-[#382039] disabled:opacity-50"
         >
           {busy ? "Creating…" : "Create my business"}
         </button>
       </form>
-      <p className="mt-3 text-center text-xs text-dim">
+      <p className="mt-4 text-center text-[11px] leading-5 text-dim">
         After setup, you&apos;ll go straight to your owner dashboard. Staff join using invite links.
       </p>
     </main>
