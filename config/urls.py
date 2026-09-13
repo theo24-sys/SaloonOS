@@ -4,7 +4,7 @@ from core import views
 # Optional trailing slashes: the Next.js rewrite drops them, and we don't want
 # APPEND_SLASH 301s (browsers rewrite redirected POSTs to GET).
 urlpatterns = [
-    re_path(r'^/?$', views.health),
+    re_path(r'^$', views.health),
     re_path(r'^api/plans/?$', views.plans),
     re_path(r'^api/signup/?$', views.signup),
     re_path(r'^api/catalog/?$', views.catalog),
