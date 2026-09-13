@@ -15,10 +15,10 @@ The two that actually matter in production:
 
 ## Option A — Render (free web services) + Supabase (free Postgres) — no credit card
 
-Render's blueprint wants its **own** managed database (paid, card required). The trick:
-bring the database from **Supabase** (free tier, no card, no expiry) and keep Render for
-just the two web services, which are free and card-less. The repo's `render.yaml` is
-already set up this way.
+Render's blueprint flow steers you toward its **own** managed database (paid, card
+required) — so skip Blueprint entirely. Bring the database from **Supabase** (free tier,
+no card, no expiry) and create the two Render web services **by hand**, which is free and
+card-less.
 
 ### Step 1 — Free Postgres on Supabase
 1. Sign up at **supabase.com** (GitHub login works) → **New project** → pick any name +
@@ -34,16 +34,59 @@ already set up this way.
    for migrations. If your password has special characters (`@ : / # ?`), URL-encode them
    (e.g. `@` → `%40`) — the app unquotes them automatically.
 
-### Step 2 — Render blueprint (the two web services)
-1. Sign up at **render.com** (no card needed) → **New → Blueprint** → pick this repo
-   (`theo24-sys/SaloonOS`). Render reads `render.yaml` and creates:
-   - `saloonos-api` — Django under gunicorn (migrate + collectstatic on every deploy)
-   - `saloonos-web` — Next.js, proxying `/api/*` to the API service
-2. When prompted, paste the **Supabase connection string** as `DATABASE_URL`.
-   For `PUBLIC_BASE_URL` enter `https://saloonos-web.onrender.com` (the default web URL;
-   you can correct it later if Render picks a different name).
-3. Deploy. First build takes ~5 min. The API health check (`/api/plans`) turns green when
-   the database connection works.
+### Step 2 — Create the two web services manually (no Blueprint)
+
+**Service 1 — API (create this one first):**
+1. Render dashboard → **New → Web Service** → connect GitHub → pick `theo24-sys/SaloonOS`.
+2. Fill in:
+   - **Name:** `saloonos-api`
+   - **Language:** Python 3
+   - **Region:** Frankfurt (closest free region to Kenya)
+   - **Instance Type:** Free
+   - **Root Directory:** *(leave blank)*
+   - **Build Command:**
+     ```
+     pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput
+     ```
+   - **Start Command:**
+     ```
+     gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 30
+     ```
+3. **Advanced → Add Environment Variable**, add all of these:
+
+   | Key | Value |
+   |---|---|
+   | `DATABASE_URL` | the Supabase session-pooler string from Step 1 |
+   | `SECRET_KEY` | click **Generate** |
+   | `DEBUG` | `0` |
+   | `PYTHON_VERSION` | `3.12.7` |
+   | `ALLOWED_HOSTS` | `.onrender.com` |
+   | `PUBLIC_BASE_URL` | `https://saloonos-web.onrender.com` |
+   | `CORS_ALLOWED_ORIGINS` | `https://saloonos-web.onrender.com` |
+
+4. Also under **Advanced → Health Check Path**: `/api/plans`.
+5. **Create Web Service.** First build ≈ 5 min; it turns Live when the DB connection works.
+
+**Service 2 — Frontend:**
+1. **New → Web Service** again → same repo.
+2. Fill in:
+   - **Name:** `saloonos-web`
+   - **Language:** Node
+   - **Instance Type:** Free
+   - **Root Directory:** `frontend`
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm start`
+3. **Advanced → Add Environment Variable**:
+
+   | Key | Value |
+   |---|---|
+   | `API_ORIGIN` | `https://saloonos-api.onrender.com` |
+   | `NODE_VERSION` | `22.14.0` |
+
+4. **Create Web Service.**
+
+> `API_ORIGIN` is read at **build time** — if you ever rename a service, re-trigger a
+> deploy of the frontend so the new URL gets baked into the API proxy.
 
 ### Step 3 — Verify & seed (optional)
 1. Open `https://saloonos-web.onrender.com` — landing page loads.
