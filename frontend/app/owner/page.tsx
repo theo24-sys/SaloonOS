@@ -114,7 +114,7 @@ export default function OwnerDash() {
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-8">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-dim">
             {new Date().toLocaleDateString("en-KE", { weekday: "long", day: "numeric", month: "long" })}
@@ -124,7 +124,7 @@ export default function OwnerDash() {
           </h1>
           <p className="text-sm text-dim">{data.business.name}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Link href="/pay" className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-dim">
           <Icon name="billing" size={16} /> Billing
           </Link>
@@ -135,7 +135,7 @@ export default function OwnerDash() {
             onClick={() => { localStorage.removeItem("sp_pin"); setPin(""); setLocked(true); setData(null); }}
             className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-dim"
           >
-          <Icon name="lock" size={16} /> Lock
+          <Icon name="logout" size={16} /> Logout
           </button>
         </div>
       </div>

@@ -9,10 +9,10 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
   const isPrivateApp = pathname === "/app"
     || pathname.startsWith("/v/")
     || pathname.startsWith("/r/")
-    || pathname === "/owner"
-    || pathname === "/pay"
-    || pathname === "/settings"
-    || pathname === "/admin-dash";
+    || pathname.startsWith("/owner")
+    || pathname.startsWith("/pay")
+    || pathname.startsWith("/settings")
+    || pathname.startsWith("/admin-dash");
 
   if (isPrivateApp) return <>{children}</>;
 
@@ -29,6 +29,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
           </Link>
           <nav className="flex items-center gap-4 text-[13px] font-semibold text-dim sm:gap-7 sm:text-sm">
             <Link href="/pricing" className="transition hover:text-ink">Pricing</Link>
+            <Link href="/owner" className="transition hover:text-ink">Log in</Link>
             <Link href="/signup" className="rounded-full bg-plum px-4 py-2 font-bold text-white shadow-[0_8px_18px_-12px_rgba(76,41,72,.8)] transition hover:-translate-y-0.5 hover:bg-[#382039]">
               Start free <span className="ml-1" aria-hidden>↗</span>
             </Link>

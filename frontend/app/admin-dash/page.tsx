@@ -200,7 +200,7 @@ export default function PlatformAdminDashboard() {
             }}
             className="rounded-xl border border-bad/30 bg-bad/5 px-3 py-2 text-xs font-semibold text-bad hover:bg-bad/10"
           >
-            Lock
+            Logout
           </button>
         </div>
       </div>
