@@ -188,9 +188,18 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
     ...(typeof window !== "undefined" ? { "X-SP-Public-Origin": window.location.origin } : {}),
     ...(opts.headers as Record<string, string> | undefined),
   };
-  const res = await fetch(path, { ...opts, headers, cache: "no-store" });
+  let res: Response | undefined;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    res = await fetch(path, { ...opts, headers, cache: "no-store" });
+    if (![502, 503, 504].includes(res.status) || attempt === 2) break;
+    await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+  }
+  if (!res) throw new Error("The service is temporarily unavailable. Please try again.");
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if ([502, 503, 504].includes(res.status)) {
+      throw new Error("The service is waking up. Please try again in a few seconds.");
+    }
     const detail =
       (data as { error?: string; detail?: string }).error ||
       (data as { detail?: string }).detail ||
