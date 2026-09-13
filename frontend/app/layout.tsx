@@ -52,14 +52,23 @@ export default function RootLayout({
           </div>
         </header>
         {children}
-        <footer className="no-print mx-auto max-w-2xl px-5 py-10 text-center text-xs text-dim">
-          <img src="/favicon.png" alt="" className="mx-auto mb-2 h-6 w-6 opacity-70" />
-          <span className="font-display italic">SaloonOS</span> — Manage · Verify · Grow
-          <div className="mt-1">Every bill must be verified by the customer <span className="text-brand">♡</span> That&apos;s the product.</div>
-          <div className="mt-3 text-[11px]">
-            <Link href="/admin-dash" className="text-dim/70 hover:text-plum underline underline-offset-2">
-              Platform Admin
-            </Link>
+        <footer className="no-print mx-auto max-w-2xl px-5 py-10 text-center text-xs text-dim space-y-3">
+          <img src="/favicon.png" alt="" className="mx-auto h-6 w-6 opacity-70" />
+          <div>
+            <span className="font-display italic text-ink font-semibold">SaloonOS</span> — Customer-verified billing for salons & barbershops
+          </div>
+          <div className="text-[11px] text-dim/80">
+            A product of <span className="font-semibold text-ink">Morggy Technologies</span> · Juja, Nairobi · Tel: <a href="tel:0714042946" className="text-plum font-semibold hover:underline">0714042946</a>
+          </div>
+          <div className="flex items-center justify-center gap-4 text-[11px]">
+            <Link href="/pricing" className="hover:text-ink">Pricing</Link>
+            <span>·</span>
+            <Link href="/privacy" className="hover:text-ink">Privacy Policy</Link>
+            <span>·</span>
+            <Link href="/terms" className="hover:text-ink">Terms of Service</Link>
+          </div>
+          <div className="text-[10px] text-dim/60 pt-2 border-t border-line">
+            © 2026 Morggy Technologies. All rights reserved.
           </div>
         </footer>
       </body>
