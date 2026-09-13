@@ -299,7 +299,7 @@ export const api = {
     slug: string,
     body: Partial<{ trial_days_add: number; paid_days_add: number; plan_code: string; owner_pin: string; name: string }>
   ) =>
-    req<{ ok: boolean; business: any }>(`/api/platform-admin/businesses/${slug}/`, {
+    req<{ ok: boolean; business: Record<string, unknown> }>(`/api/platform-admin/businesses/${slug}/`, {
       method: "POST",
       headers: { "X-SP-Admin-Key": adminKey },
       body: JSON.stringify(body),

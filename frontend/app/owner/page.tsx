@@ -237,7 +237,7 @@ export default function OwnerDash() {
             <div className="rounded-2xl border border-line bg-surface p-4">
               <h2 className="font-display font-bold">Top services</h2>
               {analyticsData.top_services.length === 0 && <p className="mt-2 text-sm text-dim">No paid services yet this month.</p>}
-              {analyticsData.top_services.map((s, i) => (
+              {analyticsData.top_services.map((s) => (
                 <div key={s.name} className="mt-3">
                   <div className="flex items-baseline justify-between text-sm">
                     <span className="font-semibold">{s.name} <span className="text-xs font-normal text-dim">× {s.count}</span></span>

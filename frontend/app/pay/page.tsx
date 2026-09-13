@@ -25,7 +25,6 @@ export default function BillingPage() {
   const [cycle, setCycle] = useState<Cycle>("monthly");
   const [phone, setPhone] = useState("");
   const [phase, setPhase] = useState<Phase>("form");
-  const [pendingId, setPendingId] = useState<number | null>(null);
   const [statusMsg, setStatusMsg] = useState("");
   const [receipt, setReceipt] = useState("");
   const [history, setHistory] = useState<MpesaPaymentRow[]>([]);
@@ -84,7 +83,6 @@ export default function BillingPage() {
     setLockErr("");
     try {
       const r = await api.stkInitiate(store.slug, store.pin, { phone, cycle, plan_code: planCode || undefined });
-      setPendingId(r.payment_id);
       setStatusMsg(r.message);
       setPhase("waiting");
       startPolling(r.payment_id);

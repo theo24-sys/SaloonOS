@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api, Bill, BillItem, Catalog, money, store } from "@/lib/api";
 import { Badge } from "@/app/receipt";
-import { MpesaScanTile } from "@/app/mpesa";
 
 function BillLines({ items, total }: { items: BillItem[]; total: number }) {
   return (

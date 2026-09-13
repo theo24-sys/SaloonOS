@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { api, Bill } from "@/lib/api";
 import { Receipt } from "@/app/receipt";
 import { MpesaTrustStrip } from "@/app/mpesa";

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api, Catalog, money, store } from "@/lib/api";
+import { api, Catalog, store } from "@/lib/api";
 import { Receipt, THEMES, Accent } from "@/app/receipt";
 
 export default function Settings() {
