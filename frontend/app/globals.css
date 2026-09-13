@@ -101,8 +101,9 @@ input::placeholder { color: var(--color-dim); }
     background: white !important;
     border-color: #d9d4cf !important;
   }
+}
 
-  /* M-Pesa payment experience */
+/* M-Pesa payment experience */
   .payment-page { padding-top: 48px; padding-bottom: 80px; }
   .payment-heading { align-items: flex-start; gap: 24px; }
   .payment-heading em { color: var(--color-brand2); font-style: italic; font-weight: 500; }
@@ -112,16 +113,16 @@ input::placeholder { color: var(--color-dim); }
   .payment-state { background: #f6fcf7; }.payment-state.waiting { border-color: rgba(53,185,86,.35); }.payment-state.success { border-color: #35b956; }.payment-state.error { border-color: #d49a95; background: #fff8f7; }.phone-pulse { display: flex; align-items: center; justify-content: center; width: 54px; height: 54px; border: 7px solid #d8f1dc; border-radius: 50%; color: #169448; font-size: 26px; animation: payment-pulse 1.6s ease-in-out infinite; }.success-mark,.error-mark { display: flex; align-items: center; justify-content: center; width: 51px; height: 51px; margin: 0 auto; border-radius: 50%; font-size: 25px; font-weight: 900; }.success-mark { background: #d8f1dc; color: #168043; }.error-mark { background: #f8ddda; color: #ad4c42; }
   .mpesa-sticker-card { margin-top: 20px; overflow: hidden; border: 1px solid rgba(53,185,86,.34); border-radius: 18px; background: white; box-shadow: 0 18px 40px -30px rgba(14,100,49,.45); }.mpesa-sticker-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; background: linear-gradient(100deg,#08783a,#18a44d); padding: 19px 20px; color: white; }.sticker-kicker { display: block; color: #b9eac5; font-size: 10px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }.mpesa-sticker-header h2 { margin-top: 4px; font-family: var(--font-display); font-size: 25px; font-weight: 600; }.mpesa-sticker-header p { margin-top: 4px; color: #d7f3dc; font-size: 12px; }.scan-icon { display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.35); border-radius: 13px; font-size: 29px; transform: rotate(-15deg); }.mpesa-sticker-content { display: grid; grid-template-columns: minmax(270px,1.05fr) 1fr; gap: 22px; align-items: center; padding: 20px; }.sticker-frame { overflow: hidden; border: 1px solid #d7e7da; border-radius: 12px; background: #f4fbf5; padding: 8px; }.sticker-image { display: block; width: 100%; height: auto; border-radius: 7px; }.sticker-details { display: flex; flex-direction: column; gap: 14px; }.detail-step { display: flex; gap: 11px; }.detail-step > span { color: #35a857; font-size: 10px; font-weight: 900; letter-spacing: .1em; }.detail-step strong,.detail-step small { display: block; }.detail-step strong { font-size: 13px; }.detail-step small { margin-top: 2px; color: var(--color-dim); font-size: 11px; line-height: 1.4; }.detail-step b { color: #08783a; }.till-callout { margin-top: 1px; border-radius: 11px; background: #eef9f0; padding: 12px; color: #08783a; }.till-callout small,.till-callout span { display: block; }.till-callout small { font-size: 9px; font-weight: 800; letter-spacing: .13em; }.till-callout strong { display: block; margin-top: 1px; font-family: var(--font-display); font-size: 28px; letter-spacing: .12em; }.till-callout span { margin-top: 2px; font-size: 10px; font-weight: 800; letter-spacing: .08em; }.mpesa-sticker-footer { display: flex; align-items: center; justify-content: center; gap: 7px; border-top: 1px solid #e1f0e3; background: #f7fcf8; padding: 10px 14px; color: #4d8058; font-size: 10px; font-weight: 700; text-align: center; }.safaricom-dot { width: 7px; height: 7px; border-radius: 50%; background: #35b956; }.footer-divider { color: #abcdb1; }
   @keyframes payment-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(53,185,86,.22); } 50% { box-shadow: 0 0 0 9px rgba(53,185,86,0); } }
-  @media (max-width: 640px) { .payment-page { padding-top: 30px; }.payment-heading { flex-direction: column; }.payment-heading h1 { font-size: 39px; }.payment-heading > a { align-self: flex-start; order: -1; }.mpesa-trust-strip { align-items: flex-start; flex-wrap: wrap; gap: 11px; }.mpesa-brand-lockup { padding-right: 10px; }.mpesa-secure-badge { margin-left: 47px; margin-top: -30px; }.mpesa-sticker-header { padding: 16px; }.mpesa-sticker-content { grid-template-columns: 1fr; gap: 16px; padding: 15px; }.sticker-frame { max-width: 390px; margin: 0 auto; }.mpesa-sticker-footer { flex-wrap: wrap; }.footer-divider { display: none; } }
+@media (max-width: 640px) { .payment-page { padding-top: 30px; }.payment-heading { flex-direction: column; }.payment-heading h1 { font-size: 39px; }.payment-heading > a { align-self: flex-start; order: -1; }.mpesa-trust-strip { align-items: flex-start; flex-wrap: wrap; gap: 11px; }.mpesa-brand-lockup { padding-right: 10px; }.mpesa-secure-badge { margin-left: 47px; margin-top: -30px; }.mpesa-sticker-header { padding: 16px; }.mpesa-sticker-content { grid-template-columns: 1fr; gap: 16px; padding: 15px; }.sticker-frame { max-width: 390px; margin: 0 auto; }.mpesa-sticker-footer { flex-wrap: wrap; }.footer-divider { display: none; } }
 
-  @media (max-width: 900px) {
+@media (max-width: 900px) {
     .hero-section { grid-template-columns: 1fr; gap: 52px; padding-top: 60px; }
     .hero-copy h1 { max-width: 640px; }
     .dashboard-preview { max-width: 680px; width: 100%; margin: 0 auto; }
     .section-block, .process-section { padding-top: 85px; padding-bottom: 85px; }
-  }
+}
 
-  @media (max-width: 640px) {
+@media (max-width: 640px) {
     .hero-section, .section-block, .process-section, .cta-section { padding-left: 18px; padding-right: 18px; }
     .hero-section { padding-top: 44px; padding-bottom: 60px; }
     .hero-copy h1 { font-size: 48px; }
@@ -145,7 +146,8 @@ input::placeholder { color: var(--color-dim); }
     .process-step h3 { margin-top: 14px; }
     .cta-section { align-items: flex-start; flex-direction: column; margin: 0 18px 45px; padding-top: 38px; padding-bottom: 38px; }
     .cta-section .button { width: 100%; }
-  }
+}
+@media print {
   body { background: white; }
   main { padding: 0 !important; max-width: 30rem !important; margin: 0 auto !important; }
   .shadow-\[0_20px_50px_-24px_rgba\(93\,58\,88\,0\.35\)\] { box-shadow: none !important; }

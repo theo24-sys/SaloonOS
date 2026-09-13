@@ -6,9 +6,15 @@ import { usePathname } from "next/navigation";
 
 export default function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isStaffOrCustomer = pathname === "/app" || pathname.startsWith("/v/") || pathname.startsWith("/r/");
+  const isPrivateApp = pathname === "/app"
+    || pathname.startsWith("/v/")
+    || pathname.startsWith("/r/")
+    || pathname === "/owner"
+    || pathname === "/pay"
+    || pathname === "/settings"
+    || pathname === "/admin-dash";
 
-  if (isStaffOrCustomer) return <>{children}</>;
+  if (isPrivateApp) return <>{children}</>;
 
   return (
     <>
