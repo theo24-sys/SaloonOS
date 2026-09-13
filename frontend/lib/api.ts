@@ -111,6 +111,76 @@ export type StkStatus = {
   subscription: Subscription;
 };
 
+export type PlatformOverview = {
+  total_businesses: number;
+  subscriptions: {
+    paid: number;
+    trial: number;
+    expired: number;
+    mrr: number;
+  };
+  bills_summary: {
+    total: number;
+    verified: number;
+    paid: number;
+    disputed: number;
+    voided: number;
+    verification_rate: number;
+    total_gmv: number;
+  };
+  recent_events: {
+    id: number;
+    business_name: string;
+    business_slug: string;
+    bill_code: string;
+    type: string;
+    detail: string;
+    staff_name: string | null;
+    at: string;
+  }[];
+};
+
+export type PlatformBusiness = {
+  id: number;
+  name: string;
+  slug: string;
+  owner_pin: string;
+  created_at: string;
+  trial_ends_at: string | null;
+  plan_paid_until: string | null;
+  subscription: Subscription;
+  plan: {
+    code: string;
+    name: string;
+    max_staff: number;
+    monthly_verified_bills: number;
+    price_monthly: number;
+  };
+  staff_count: number;
+  total_bills: number;
+  verified_bills: number;
+  disputed_bills: number;
+  total_revenue: number;
+  tagline: string;
+  phone: string;
+  location: string;
+};
+
+export type PlatformPayment = {
+  id: number;
+  business_name: string;
+  business_slug: string;
+  plan_name: string;
+  cycle: "monthly" | "annual";
+  amount: number;
+  phone: string;
+  status: "pending" | "success" | "failed" | "cancelled" | "timeout";
+  mpesa_receipt: string;
+  result_desc: string;
+  created_at: string;
+  completed_at: string | null;
+};
+
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -216,6 +286,28 @@ export const api = {
       headers: { "X-SP-Business": slug },
       body: JSON.stringify({ code, receipt }),
     }),
+  platformOverview: (adminKey: string) =>
+    req<PlatformOverview>("/api/platform-admin/overview/", {
+      headers: { "X-SP-Admin-Key": adminKey },
+    }),
+  platformBusinesses: (adminKey: string) =>
+    req<{ businesses: PlatformBusiness[] }>("/api/platform-admin/businesses/", {
+      headers: { "X-SP-Admin-Key": adminKey },
+    }),
+  platformUpdateBusiness: (
+    adminKey: string,
+    slug: string,
+    body: Partial<{ trial_days_add: number; paid_days_add: number; plan_code: string; owner_pin: string; name: string }>
+  ) =>
+    req<{ ok: boolean; business: any }>(`/api/platform-admin/businesses/${slug}/`, {
+      method: "POST",
+      headers: { "X-SP-Admin-Key": adminKey },
+      body: JSON.stringify(body),
+    }),
+  platformPayments: (adminKey: string) =>
+    req<{ payments: PlatformPayment[] }>("/api/platform-admin/payments/", {
+      headers: { "X-SP-Admin-Key": adminKey },
+    }),
 };
 
 const safeGet = (k: string) =>
@@ -233,5 +325,11 @@ export const store = {
   },
   set pin(v: string) {
     localStorage.setItem("sp_pin", v);
+  },
+  get adminKey() {
+    return safeGet("sp_admin_key") || "";
+  },
+  set adminKey(v: string) {
+    localStorage.setItem("sp_admin_key", v);
   },
 };

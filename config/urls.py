@@ -27,4 +27,8 @@ urlpatterns = [
     re_path(r'^api/invites/accept/?$', views.invite_accept),
     re_path(r'^api/mpesa/redeem-plan/?$', views.redeem_scan_plan),
     re_path(r'^api/mpesa/redeem-bill/?$', views.redeem_scan_bill),
+    re_path(r'^api/platform-admin/overview/?$', views.platform_admin_overview),
+    re_path(r'^api/platform-admin/businesses/?$', views.platform_admin_businesses),
+    re_path(r'^api/platform-admin/businesses/(?P<slug>[^/]+)/?$', views.platform_admin_update_business),
+    re_path(r'^api/platform-admin/payments/?$', views.platform_admin_payments),
 ]

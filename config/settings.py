@@ -17,6 +17,7 @@ def env(key, default=''):
 
 
 SECRET_KEY = env('SECRET_KEY', 'dev-only-serviceproof-secret-key-change-me')
+ADMIN_KEY = env('ADMIN_KEY', 'saloonos-master-2026')
 DEBUG = env('DEBUG', '1') not in ('0', 'false', 'False')
 ALLOWED_HOSTS = [h for h in env('ALLOWED_HOSTS', '*').split(',') if h]
 

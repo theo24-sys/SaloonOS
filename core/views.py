@@ -785,3 +785,202 @@ def bill_audit(request, code):
     if not bill:
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
     return Response(BillSerializer(bill).data)
+
+
+# --- Platform Admin (Master Management & Monitoring) -------------------------
+
+def require_admin_key(request):
+    key = request.headers.get('X-SP-Admin-Key', '').strip()
+    expected = getattr(settings, 'ADMIN_KEY', 'saloonos-master-2026').strip()
+    if not key or key != expected:
+        raise Unauthorized('Invalid or missing platform admin key')
+
+
+@api_view(['GET'])
+@permission_classes([])
+def platform_admin_overview(request):
+    """Platform-wide summary metrics for operators."""
+    require_admin_key(request)
+    now = timezone.now()
+    businesses = Business.objects.select_related('plan').all()
+    total_biz = businesses.count()
+
+    paid_cnt = 0
+    trial_cnt = 0
+    expired_cnt = 0
+    mrr = 0
+
+    for b in businesses:
+        sub = b.subscription_info()
+        st = sub['state']
+        if st == 'paid':
+            paid_cnt += 1
+            mrr += b.plan.price_monthly
+        elif st == 'trial':
+            trial_cnt += 1
+        else:
+            expired_cnt += 1
+
+    total_bills = Bill.objects.count()
+    total_verified = Bill.objects.filter(status__in=['approved', 'paid']).count()
+    total_paid_bills = Bill.objects.filter(status='paid').count()
+    total_disputed = Bill.objects.filter(status='disputed').count()
+    total_voided = Bill.objects.filter(status='voided').count()
+    total_gmv = Bill.objects.filter(status='paid').aggregate(s=Sum('total'))['s'] or 0
+
+    verification_rate = round((total_verified / total_bills * 100), 1) if total_bills else 100.0
+
+    recent_events_qs = AuditEvent.objects.select_related('bill__business', 'bill__staff').order_by('-at')[:30]
+    recent_events = [{
+        'id': e.id,
+        'business_name': e.bill.business.name,
+        'business_slug': e.bill.business.slug,
+        'bill_code': e.bill.code,
+        'type': e.type,
+        'detail': e.detail,
+        'staff_name': e.bill.staff.name if e.bill.staff else None,
+        'at': e.at,
+    } for e in recent_events_qs]
+
+    return Response({
+        'total_businesses': total_biz,
+        'subscriptions': {
+            'paid': paid_cnt,
+            'trial': trial_cnt,
+            'expired': expired_cnt,
+            'mrr': mrr,
+        },
+        'bills_summary': {
+            'total': total_bills,
+            'verified': total_verified,
+            'paid': total_paid_bills,
+            'disputed': total_disputed,
+            'voided': total_voided,
+            'verification_rate': verification_rate,
+            'total_gmv': total_gmv,
+        },
+        'recent_events': recent_events,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([])
+def platform_admin_businesses(request):
+    """Full tenant directory with plan & billing details."""
+    require_admin_key(request)
+    businesses = Business.objects.select_related('plan').prefetch_related('staff', 'bills').order_by('-created_at')
+    
+    data = []
+    for b in businesses:
+        bills_qs = b.bills.all()
+        total_bills = bills_qs.count()
+        verified_bills = bills_qs.filter(status__in=['approved', 'paid']).count()
+        revenue = bills_qs.filter(status='paid').aggregate(s=Sum('total'))['s'] or 0
+        disputed = bills_qs.filter(status='disputed').count()
+        
+        data.append({
+            'id': b.id,
+            'name': b.name,
+            'slug': b.slug,
+            'owner_pin': b.owner_pin,
+            'created_at': b.created_at,
+            'trial_ends_at': b.trial_ends_at,
+            'plan_paid_until': b.plan_paid_until,
+            'subscription': b.subscription_info(),
+            'plan': {
+                'code': b.plan.code,
+                'name': b.plan.name,
+                'max_staff': b.plan.max_staff,
+                'monthly_verified_bills': b.plan.monthly_verified_bills,
+                'price_monthly': b.plan.price_monthly,
+            },
+            'staff_count': b.staff.count(),
+            'total_bills': total_bills,
+            'verified_bills': verified_bills,
+            'disputed_bills': disputed,
+            'total_revenue': revenue,
+            'tagline': b.tagline,
+            'phone': b.phone,
+            'location': b.location,
+        })
+
+    return Response({'businesses': data})
+
+
+@api_view(['POST'])
+@permission_classes([])
+def platform_admin_update_business(request, slug):
+    """Perform management action on tenant: extend trial, update plan, reset PIN."""
+    require_admin_key(request)
+    try:
+        biz = Business.objects.get(slug=slug)
+    except Business.DoesNotExist:
+        return Response({'error': 'Business not found'}, status=http.HTTP_404_NOT_FOUND)
+
+    payload = request.data
+    now = timezone.now()
+
+    # Extend trial by N days
+    if 'trial_days_add' in payload:
+        days = int(payload['trial_days_add'])
+        base_dt = biz.trial_ends_at if (biz.trial_ends_at and biz.trial_ends_at > now) else now
+        biz.trial_ends_at = base_dt + timedelta(days=days)
+
+    # Extend paid subscription by N days
+    if 'paid_days_add' in payload:
+        days = int(payload['paid_days_add'])
+        base_dt = biz.plan_paid_until if (biz.plan_paid_until and biz.plan_paid_until > now) else now
+        biz.plan_paid_until = base_dt + timedelta(days=days)
+
+    # Change plan tier
+    if 'plan_code' in payload:
+        try:
+            new_plan = Plan.objects.get(code=payload['plan_code'])
+            biz.plan = new_plan
+        except Plan.DoesNotExist:
+            return Response({'error': 'Unknown plan'}, status=http.HTTP_400_BAD_REQUEST)
+
+    # Reset owner PIN
+    if 'owner_pin' in payload:
+        pin = str(payload['owner_pin']).strip()
+        if len(pin) >= 4:
+            biz.owner_pin = pin
+
+    if 'name' in payload and str(payload['name']).strip():
+        biz.name = str(payload['name']).strip()
+
+    biz.save()
+    return Response({
+        'ok': True,
+        'business': {
+            'slug': biz.slug,
+            'name': biz.name,
+            'owner_pin': biz.owner_pin,
+            'plan': biz.plan.code,
+            'subscription': biz.subscription_info(),
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([])
+def platform_admin_payments(request):
+    """Global M-Pesa payments ledger across all salons."""
+    require_admin_key(request)
+    payments = MpesaPayment.objects.select_related('business', 'plan').order_by('-created_at')[:100]
+    data = [{
+        'id': p.id,
+        'business_name': p.business.name,
+        'business_slug': p.business.slug,
+        'plan_name': p.plan.name,
+        'cycle': p.cycle,
+        'amount': p.amount,
+        'phone': p.phone,
+        'status': p.status,
+        'mpesa_receipt': p.mpesa_receipt,
+        'result_desc': p.result_desc,
+        'created_at': p.created_at,
+        'completed_at': p.completed_at,
+    } for p in payments]
+    return Response({'payments': data})
+

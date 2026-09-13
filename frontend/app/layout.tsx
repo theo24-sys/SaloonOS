@@ -56,6 +56,11 @@ export default function RootLayout({
           <img src="/favicon.png" alt="" className="mx-auto mb-2 h-6 w-6 opacity-70" />
           <span className="font-display italic">SaloonOS</span> — Manage · Verify · Grow
           <div className="mt-1">Every bill must be verified by the customer <span className="text-brand">♡</span> That&apos;s the product.</div>
+          <div className="mt-3 text-[11px]">
+            <Link href="/admin-dash" className="text-dim/70 hover:text-plum underline underline-offset-2">
+              Platform Admin
+            </Link>
+          </div>
         </footer>
       </body>
     </html>
