@@ -13,13 +13,19 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
   const [confirmStep, setConfirmStep] = useState(false);
   const [err, setErr] = useState("");
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     params.then((p) => setCode(p.code));
   }, [params]);
 
   const load = useCallback((c: string) => {
-    api.getBill(c).then(setBill).catch(() => setNotFound(true));
+    setLoadError("");
+    api.getBill(c).then(setBill).catch((error) => {
+      const message = error instanceof Error ? error.message : "Unable to load this bill";
+      if (message.toLowerCase().includes("not found")) setNotFound(true);
+      else setLoadError(message);
+    });
   }, []);
 
   useEffect(() => {
@@ -48,6 +54,18 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
         <p className="mt-2 text-sm text-dim">
           Check the link or ask at the counter for your receipt reference.
         </p>
+      </main>
+    );
+
+  if (loadError)
+    return (
+      <main className="mx-auto max-w-md px-5 py-20 text-center">
+        <div className="text-4xl">⚠</div>
+        <h1 className="font-display mt-3 text-2xl font-bold">Receipt temporarily unavailable</h1>
+        <p className="mt-2 text-sm text-dim">{loadError}</p>
+        <button onClick={() => code && load(code)} className="mt-5 rounded-xl bg-plum px-5 py-3 text-sm font-bold text-white">
+          Try again
+        </button>
       </main>
     );
 
