@@ -38,6 +38,7 @@ export default function StaffApp() {
   const [scanErr, setScanErr] = useState("");
   const [switchOpen, setSwitchOpen] = useState(false);
   const [switchSlug, setSwitchSlug] = useState("");
+  const [authReady, setAuthReady] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(() => {
@@ -50,13 +51,20 @@ export default function StaffApp() {
       setErr(e.message);
     });
   }, []);
-  useEffect(load, [load]);
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   // Staff invite links (/app?invite=CODE) bind this device to the salon.
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("invite");
-    if (!code) return;
+    if (!code) {
+      if (store.staffToken || store.pin) {
+        load();
+      } else {
+        setInviteMsg("Staff access is invite-only. Ask your salon owner for your invite link.");
+      }
+      setAuthReady(true);
+      return;
+    }
     api.inviteAccept(code)
       .then((r) => {
         store.slug = r.business.slug;
@@ -65,8 +73,12 @@ export default function StaffApp() {
         setInviteMsg(`Welcome, ${r.staff.name} — you're signed in to ${r.business.name}.`);
         window.history.replaceState({}, "", "/app");
         load();
+        setAuthReady(true);
       })
-      .catch((e) => setInviteMsg(e.message));
+      .catch((e) => {
+        setInviteMsg(e.message);
+        setAuthReady(true);
+      });
   }, [load]);
 
   const total = items.reduce((s, it) => s + (Number(it.price) || 0), 0);
@@ -175,7 +187,25 @@ export default function StaffApp() {
       </main>
     );
   }
-  if (!cat) return <main className="mx-auto max-w-md px-5 py-10 text-dim">Loading…</main>;
+  if (!authReady || (!cat && !err)) return <main className="mx-auto max-w-md px-5 py-10 text-dim">Opening Staff POS…</main>;
+
+  if (!cat && !store.staffToken && !store.pin) {
+    return (
+      <main className="mx-auto max-w-md px-5 py-16">
+        <div className="rounded-3xl border border-line bg-surface p-7 text-center shadow-[0_18px_45px_-28px_rgba(93,58,88,0.45)]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f8e9f0] text-2xl text-plum">✦</div>
+          <h1 className="font-display mt-4 text-2xl font-bold">Staff invite required</h1>
+          <p className="mt-2 text-sm leading-6 text-dim">
+            Your salon owner should send you a personal SaloonOS invite link. Open that link on this device to sign in.
+          </p>
+          <Link href="/" className="mt-6 inline-flex rounded-xl bg-plum px-5 py-3 text-sm font-bold text-white">
+            Back to SaloonOS
+          </Link>
+        </div>
+      </main>
+    );
+  }
+  if (!cat) return <main className="mx-auto max-w-md px-5 py-10 text-dim">Loading salon…</main>;
 
   return (
     <main className="mx-auto max-w-md px-5 py-6">

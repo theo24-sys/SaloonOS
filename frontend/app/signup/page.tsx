@@ -26,7 +26,7 @@ function SignupInner() {
       const biz = await api.signup({ name, plan_code: planCode, owner_pin: pin });
       localStorage.setItem("sp_slug", biz.slug);
       localStorage.setItem("sp_pin", pin);
-      router.push("/app");
+      router.push("/owner");
     } catch (e2) {
       setErr((e2 as Error).message);
       setBusy(false);
@@ -82,7 +82,7 @@ function SignupInner() {
         </button>
       </form>
       <p className="mt-3 text-center text-xs text-dim">
-        Demo login: business <b>xyz-salon</b>, PIN <b>2026</b>
+        After setup, you&apos;ll go straight to your owner dashboard. Staff join using invite links.
       </p>
     </main>
   );

@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { store } from "@/lib/api";
 
 const steps = [
   "Customer gets service",
@@ -13,6 +18,19 @@ const steps = [
 ];
 
 export default function Home() {
+  const router = useRouter();
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    if (store.pin) router.replace("/owner");
+    else if (store.staffToken && store.slug) router.replace("/app");
+    else setCheckingSession(false);
+  }, [router]);
+
+  if (checkingSession) {
+    return <main className="mx-auto max-w-md px-5 py-24 text-center text-sm text-dim">Opening SaloonOS…</main>;
+  }
+
   return (
     <main className="mx-auto max-w-2xl px-5 py-10">
       <Image

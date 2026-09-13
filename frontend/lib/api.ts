@@ -315,7 +315,7 @@ const safeGet = (k: string) =>
 
 export const store = {
   get slug() {
-    return safeGet("sp_slug") || "xyz-salon";
+    return safeGet("sp_slug");
   },
   set slug(v: string) {
     localStorage.setItem("sp_slug", v);
