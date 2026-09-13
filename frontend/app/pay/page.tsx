@@ -135,16 +135,17 @@ export default function BillingPage() {
   const subBadge = sub ? STATE_STYLE[sub.state] : "";
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-8">
-      <div className="flex items-center justify-between">
+    <main className="payment-page mx-auto max-w-4xl px-5 py-8">
+      <div className="payment-heading flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold">Billing</h1>
-          <p className="text-sm text-dim">Pay your SaloonOS plan with M-Pesa</p>
+          <div className="eyebrow">Account billing</div>
+          <h1 className="font-display mt-2 text-4xl font-semibold tracking-[-.035em]">Keep your salon <em>in sync.</em></h1>
+          <p className="mt-2 max-w-lg text-sm leading-6 text-dim">Choose a plan, receive a secure M-Pesa prompt, and keep customer verification running without interruption.</p>
         </div>
-        <Link href="/owner" className="rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-dim">← Dashboard</Link>
+        <Link href="/owner" className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-dim transition hover:border-brand hover:text-ink">← Dashboard</Link>
       </div>
 
-      <MpesaTrustStrip note="Official Safaricom Daraja payments · you approve every payment on your phone" />
+      <MpesaTrustStrip note="Official Safaricom Daraja payments · your PIN stays private" />
 
       {sub && (
         <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
@@ -161,8 +162,8 @@ export default function BillingPage() {
       )}
 
       {phase === "form" && (
-        <form onSubmit={pay} className="mt-4 rounded-2xl border border-line bg-surface p-4">
-          <h2 className="font-display font-bold">1 · Choose plan & period</h2>
+        <form onSubmit={pay} className="payment-form mt-5 rounded-2xl border border-line bg-surface p-5 sm:p-6">
+          <div className="payment-step-label"><span>01</span><div><h2 className="font-display font-bold">Choose your plan</h2><p>Scale your verification as your team grows.</p></div></div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             {plans.map((p) => (
               <button type="button" key={p.code} onClick={() => setPlanCode(p.code)}
@@ -181,22 +182,22 @@ export default function BillingPage() {
             ))}
           </div>
 
-          <h2 className="font-display mt-5 font-bold">2 · M-Pesa number</h2>
+          <div className="payment-step-label mt-6"><span>02</span><div><h2 className="font-display font-bold">Where should we send the prompt?</h2><p>Enter the Safaricom number that will approve this payment.</p></div></div>
           <input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07XX XXX XXX"
             className="mt-2 w-full rounded-xl border border-line bg-surface2 px-3 py-3 text-lg outline-none focus:border-brand" />
           {lockErr && <p className="mt-2 text-sm text-bad">{lockErr}</p>}
 
-          <button disabled={!phone || !amount} className="mt-4 w-full rounded-xl bg-[#3AA335] px-4 py-3 font-bold text-white shadow-[0_10px_24px_-12px_rgba(58,163,53,0.7)] transition hover:bg-[#33922f] disabled:opacity-50">
-            Pay {money(amount)} via M-Pesa
+          <button disabled={!phone || !amount} className="mpesa-primary-button mt-5 w-full rounded-xl px-4 py-3.5 font-bold text-white disabled:opacity-50">
+            <span className="mpesa-button-mark">M</span> Send {money(amount)} M-Pesa prompt <span aria-hidden>↗</span>
           </button>
-          <p className="mt-2 text-center text-xs text-dim">You&apos;ll get an STK push — enter your M-Pesa PIN to approve.</p>
+          <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-dim"><span className="trust-check small">✓</span> You&apos;ll get an STK push — enter your M-Pesa PIN to approve.</p>
         </form>
       )}
 
       {phase === "waiting" && (
-        <div className="mt-4 rounded-2xl border border-[#3AA335]/40 bg-[#f4faf5] p-6 text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#3AA335] border-t-transparent" />
-          <h2 className="font-display mt-4 font-bold">Check your phone 📲</h2>
+        <div className="payment-state waiting mt-5 rounded-2xl border p-7 text-center">
+          <div className="phone-pulse mx-auto"><span>⌁</span></div>
+          <h2 className="font-display mt-4 text-2xl font-bold">Check your phone</h2>
           <p className="mt-1 text-sm text-dim">{statusMsg}</p>
           <p className="mt-1 text-xs text-dim">Waiting for confirmation…</p>
           <button onClick={() => { stopPoll(); setPhase("form"); }} className="mt-4 text-sm font-semibold text-dim underline">Cancel</button>
@@ -204,9 +205,9 @@ export default function BillingPage() {
       )}
 
       {phase === "done" && (
-        <div className="mt-4 rounded-2xl border border-[#3AA335] bg-[#f4faf5] p-6 text-center">
-          <div className="text-4xl">✓</div>
-          <h2 className="font-display mt-2 font-bold">Payment received</h2>
+        <div className="payment-state success mt-5 rounded-2xl border p-7 text-center">
+          <div className="success-mark">✓</div>
+          <h2 className="font-display mt-3 text-2xl font-bold">Payment received</h2>
           <p className="mt-1 text-sm text-dim">M-Pesa receipt <span className="font-mono font-semibold text-ink">{receipt}</span></p>
           {sub?.end && <p className="text-sm text-dim">Plan active until {new Date(sub.end).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })} ♡</p>}
           <div className="mt-4 flex justify-center gap-2">
@@ -217,9 +218,9 @@ export default function BillingPage() {
       )}
 
       {phase === "error" && (
-        <div className="mt-4 rounded-2xl border border-bad bg-surface p-6 text-center">
-          <div className="text-4xl">⚠</div>
-          <h2 className="font-display mt-2 font-bold">Payment not completed</h2>
+        <div className="payment-state error mt-5 rounded-2xl border p-7 text-center">
+          <div className="error-mark">!</div>
+          <h2 className="font-display mt-3 text-2xl font-bold">Payment not completed</h2>
           <p className="mt-1 text-sm text-dim">{statusMsg}</p>
           <button onClick={() => setPhase("form")} className="mt-4 rounded-xl bg-[#3AA335] px-4 py-2 text-sm font-bold text-white">Try again</button>
         </div>
