@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const steps = [
   "Customer gets service",
@@ -14,9 +15,11 @@ const steps = [
 export default function Home() {
   return (
     <main className="mx-auto max-w-2xl px-5 py-10">
-      <img
+      <Image
         src="/logo-full.png"
         alt="SaloonOS — Manage · Verify · Grow"
+        width={304}
+        height={80}
         className="mx-auto w-full max-w-[19rem]"
       />
       <h1 className="font-display mt-6 text-4xl font-bold leading-tight">

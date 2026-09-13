@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { api, Bill } from "@/lib/api";
 import { Receipt } from "@/app/receipt";
 import { MpesaTrustStrip } from "@/app/mpesa";
@@ -18,7 +19,7 @@ export default function PublicReceipt({ params }: { params: Promise<{ code: stri
   if (missing)
     return (
       <main className="mx-auto max-w-md px-5 py-20 text-center">
-        <img src="/favicon.png" alt="SaloonOS" className="mx-auto h-14 w-14 rounded-2xl" />
+        <Image src="/favicon.png" alt="SaloonOS" width={56} height={56} className="mx-auto h-14 w-14 rounded-2xl" />
         <h1 className="font-display mt-3 text-2xl font-bold">No such receipt</h1>
         <p className="mt-2 text-sm text-dim">
           If you were given this link, double-check the receipt number with the salon.
@@ -29,7 +30,7 @@ export default function PublicReceipt({ params }: { params: Promise<{ code: stri
   if (!bill)
     return (
       <main className="mx-auto max-w-md px-5 py-24 text-center text-dim">
-        <img src="/favicon.png" alt="SaloonOS" className="floaty mx-auto h-14 w-14 rounded-2xl" />
+        <Image src="/favicon.png" alt="SaloonOS" width={56} height={56} className="floaty mx-auto h-14 w-14 rounded-2xl" />
         <p className="mt-3 animate-pulse text-sm">Checking receipt…</p>
       </main>
     );
@@ -37,7 +38,7 @@ export default function PublicReceipt({ params }: { params: Promise<{ code: stri
   return (
     <main className="mx-auto max-w-md px-4 py-8">
       <p className="mb-4 flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-dim">
-        <img src="/favicon.png" alt="" className="h-5 w-5 rounded-md" />
+        <Image src="/favicon.png" alt="" width={20} height={20} className="h-5 w-5 rounded-md" />
         SaloonOS · receipt lookup
       </p>
       <Receipt branding={bill.business} bill={bill} variant="public" />

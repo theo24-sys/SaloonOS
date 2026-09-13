@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Jost } from "next/font/google";
+import Image from "next/image";
 import "./globals.css";
 import Link from "next/link";
 
@@ -36,7 +37,7 @@ export default function RootLayout({
         <header className="no-print sticky top-0 z-10 border-b border-line bg-bg/85 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-2.5 sm:px-5 sm:py-3">
             <Link href="/" className="flex shrink-0 items-center gap-2">
-              <img src="/favicon.png" alt="SaloonOS logo" className="h-9 w-9 rounded-xl sm:h-10 sm:w-10" />
+              <Image src="/favicon.png" alt="SaloonOS logo" width={40} height={40} className="h-9 w-9 rounded-xl sm:h-10 sm:w-10" />
               <span className="text-lg font-semibold tracking-wide sm:text-xl">
                 <span className="font-display">Saloon</span>
                 <span className="font-display italic text-brand">OS</span>
@@ -54,7 +55,7 @@ export default function RootLayout({
         </header>
         {children}
         <footer className="no-print mx-auto max-w-2xl px-5 py-10 text-center text-xs text-dim space-y-3">
-          <img src="/favicon.png" alt="" className="mx-auto h-6 w-6 opacity-70" />
+          <Image src="/favicon.png" alt="" width={24} height={24} className="mx-auto h-6 w-6 opacity-70" />
           <div>
             <span className="font-display italic text-ink font-semibold">SaloonOS</span> — Customer-verified billing for salons & barbershops
           </div>

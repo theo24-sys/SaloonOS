@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 /* Shared M-Pesa trust components — Safaricom green (#3AA335), official
    merchant sticker QR (Paybill 4567052 · Morggy Technologies). */
 
@@ -9,7 +11,7 @@ export function MpesaTrustStrip({ note }: { note?: string }) {
   return (
     <div className="mt-4 overflow-hidden rounded-2xl border border-[#3AA335]/30 bg-gradient-to-r from-[#eaf7ec] via-[#f2faf3] to-[#e8f6ea] p-3">
       <div className="flex items-center gap-3">
-        <img src="/mpesa-logo.png" alt="M-Pesa" className="h-9 w-9 rounded-lg border border-[#3AA335]/25 bg-white p-1" />
+        <Image src="/mpesa-logo.png" alt="M-Pesa" width={36} height={36} className="h-9 w-9 rounded-lg border border-[#3AA335]/25 bg-white p-1" />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-sm font-bold text-[#0b6e35]">
             <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#3AA335] text-[10px] text-white">✓</span>
@@ -36,7 +38,7 @@ export function MpesaScanTile({ compact }: { compact?: boolean }) {
       </div>
       <div className="flex flex-col items-center gap-4 p-5 sm:flex-row sm:items-center">
         <div className={`rounded-2xl border-2 border-[#3AA335]/40 bg-white p-2 shadow-[0_12px_30px_-18px_rgba(11,110,53,0.55)] ${compact ? "" : ""}`}>
-          <img src="/mpesa-qr.png" alt="M-Pesa scan-to-pay QR" className={compact ? "h-32 w-32" : "h-40 w-40 sm:h-44 sm:w-44"} />
+          <Image src="/mpesa-qr.png" alt="M-Pesa scan-to-pay QR" width={176} height={176} className={compact ? "h-32 w-32" : "h-40 w-40 sm:h-44 sm:w-44"} />
         </div>
         <div className="text-center sm:text-left">
           <p className="font-display text-lg font-bold text-[#0b6e35]">MORGGY TECHNOLOGIES</p>

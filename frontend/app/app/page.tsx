@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { api, Bill, BillItem, Catalog, money, store } from "@/lib/api";
 import { Badge } from "@/app/receipt";
 
@@ -291,7 +292,14 @@ export default function StaffApp() {
           {bill.status === "pending" && (
             <>
               <div className="mt-4 text-center">
-                <img src={bill.qr_data_url} alt={`QR for bill ${bill.code}`} className="mx-auto w-56 rounded-xl bg-white p-2" />
+                <Image
+                  src={bill.qr_data_url || "/favicon.png"}
+                  alt={`QR for bill ${bill.code}`}
+                  width={224}
+                  height={224}
+                  unoptimized={Boolean(bill.qr_data_url)}
+                  className="mx-auto w-56 rounded-xl bg-white p-2"
+                />
                 <div className="mt-2 text-xs text-dim">Customer scans → verifies on their phone</div>
                 <div className="mt-3 animate-pulse text-sm font-semibold text-plum">✦ Awaiting customer verification…</div>
               </div>
@@ -330,7 +338,7 @@ export default function StaffApp() {
                   <div className="mt-3 border-t border-[#3AA335]/20 pt-3">
                     <p className="mb-2 text-center text-[11px] font-semibold text-[#3f6b4d]">Customer hasn&apos;t scanned yet? Let them scan here:</p>
                     <div className="flex items-center justify-center gap-3">
-                      <img src="/mpesa-qr.png" alt="M-Pesa scan-to-pay QR" className="h-28 w-28 rounded-lg border-2 border-[#3AA335]/40 bg-white p-1.5" />
+                      <Image src="/mpesa-qr.png" alt="M-Pesa scan-to-pay QR" width={112} height={112} className="h-28 w-28 rounded-lg border-2 border-[#3AA335]/40 bg-white p-1.5" />
                       <div className="text-xs text-dim">
                         <p className="font-display text-sm font-bold text-[#0b6e35]">MORGGY TECHNOLOGIES</p>
                         <p className="mt-0.5">Paybill <span className="font-mono font-bold">4567052</span></p>

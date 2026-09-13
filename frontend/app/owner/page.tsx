@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { api, Analytics, Dashboard, money, store } from "@/lib/api";
 import { Badge } from "@/app/receipt";
 // Badge renders status chips for both pages
@@ -78,7 +79,7 @@ export default function OwnerDash() {
     return (
       <main className="mx-auto max-w-md px-5 py-16">
         <form onSubmit={unlock} className="card mx-auto max-w-xs p-6 text-center">
-          <img src="/favicon.png" alt="SaloonOS" className="mx-auto h-16 w-16 rounded-2xl" />
+          <Image src="/favicon.png" alt="SaloonOS" width={64} height={64} className="mx-auto h-16 w-16 rounded-2xl" />
           <h1 className="font-display mt-2 text-xl font-bold">SaloonOS</h1>
           <p className="text-xs uppercase tracking-[0.25em] text-dim">Owner dashboard</p>
           <p className="mt-3 text-sm text-dim">Enter your PIN</p>
