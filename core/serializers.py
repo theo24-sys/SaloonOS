@@ -61,8 +61,8 @@ class BillSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bill
         fields = ['id', 'code', 'customer_name', 'status', 'total', 'staff', 'staff_name',
-                  'payment_method', 'dispute_note', 'approved_at', 'paid_at', 'created_at',
-                  'items', 'edits', 'events', 'qr_data_url', 'verify_url', 'business']
+                  'payment_method', 'payment_ref', 'dispute_note', 'approved_at', 'paid_at',
+                  'created_at', 'items', 'edits', 'events', 'qr_data_url', 'verify_url', 'business']
 
     def get_items(self, obj):
         return list(obj.items.values('id', 'name', 'price'))

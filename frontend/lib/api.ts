@@ -28,6 +28,7 @@ export type Bill = {
   total: number;
   staff_name: string;
   payment_method: string;
+  payment_ref: string;
   dispute_note: string;
   created_at: string;
   approved_at: string | null;
@@ -202,6 +203,18 @@ export const api = {
     req<{ business: { name: string; slug: string }; staff: { id: number; name: string } }>("/api/invites/accept/", {
       method: "POST",
       body: JSON.stringify({ code }),
+    }),
+  redeemScanPlan: (slug: string, pin: string, receipt: string, cycle: "monthly" | "annual" = "monthly") =>
+    req<{ ok: boolean; plan: string; amount: number; mpesa_receipt: string; subscription: Subscription; paid_until: string }>("/api/mpesa/redeem-plan/", {
+      method: "POST",
+      headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
+      body: JSON.stringify({ receipt, cycle }),
+    }),
+  redeemScanBill: (slug: string, code: string, receipt: string) =>
+    req<Bill>(`/api/mpesa/redeem-bill/`, {
+      method: "POST",
+      headers: { "X-SP-Business": slug },
+      body: JSON.stringify({ code, receipt }),
     }),
 };
 

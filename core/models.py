@@ -111,6 +111,7 @@ class Bill(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
     paid_at = models.DateTimeField(null=True, blank=True)
     payment_method = models.CharField(max_length=20, blank=True)
+    payment_ref = models.CharField(max_length=20, blank=True)  # M-Pesa receipt code (scan payments)
     dispute_note = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

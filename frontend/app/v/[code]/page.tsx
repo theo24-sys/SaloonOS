@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, Bill } from "@/lib/api";
 import { Receipt } from "@/app/receipt";
+import { MpesaTrustStrip } from "@/app/mpesa";
 
 export default function VerifyBill({ params }: { params: Promise<{ code: string }> }) {
   const [code, setCode] = useState<string | null>(null);
@@ -119,6 +120,7 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
               {err && <p className="text-center text-sm text-bad">{err}</p>}
             </div>
           )}
+          <MpesaTrustStrip note="Paying by M-Pesa? Your payment is approved by you, on your own phone." />
         </>
       ) : (
         <>
@@ -169,6 +171,7 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
               <p className="text-center text-[11px] text-dim">
                 The receipt link opens a page anyone can verify as genuine.
               </p>
+              <MpesaTrustStrip note={bill.payment_method?.includes("M-Pesa") ? `Paid via M-Pesa${bill.payment_ref ? ` · receipt ${bill.payment_ref}` : ""} — confirmed by Safaricom.` : "M-Pesa payments are confirmed by Safaricom with an SMS receipt."} />
             </div>
           )}
 

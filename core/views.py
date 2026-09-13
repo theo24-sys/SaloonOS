@@ -1,5 +1,6 @@
 import calendar
 import random
+import re
 import string
 from datetime import timedelta
 
@@ -516,6 +517,82 @@ def mpesa_history(request):
         } for p in rows],
         'subscription': biz.subscription_info(),
     })
+
+
+# --- Scan-payment redemption (Paybill payments that bypass STK) ---------------
+
+SCAN_CODE_RE = re.compile(r'^[A-Z0-9]{8,15}$')
+
+
+def _receipt_taken(code):
+    """A receipt code can only ever be redeemed once across the whole platform,
+    whatever kind of payment it settles (plan or customer bill)."""
+    if MpesaPayment.objects.filter(mpesa_receipt=code).exists():
+        return True
+    return Bill.objects.filter(payment_ref=code).exists()
+
+
+def _mpesa_month_add(info, months):
+    """Slide `months` forward over the subscription end, 30-day cycle."""
+    base = max(timezone.now(), info['end'] or timezone.now())
+    return base + timedelta(days=30 * months)
+
+
+@api_view(['POST'])
+@permission_classes([])
+def redeem_scan_plan(request):
+    """Owner redeems a Paybill-sticker payment: receipt code + cycle extends the plan.
+    Processed synchronously — no human work, no waiting for a statement."""
+    biz = get_business(request)
+    require_owner_pin(request, biz)
+    receipt = str(request.data.get('receipt') or '').strip().upper()
+    cycle = request.data.get('cycle') or 'monthly'
+    if not SCAN_CODE_RE.match(receipt):
+        raise Invalid('Enter the M-Pesa receipt code (e.g. SJ84K2ABCD)')
+    if cycle not in ('monthly', 'annual'):
+        raise Invalid('cycle must be monthly or annual')
+    if _receipt_taken(receipt):
+        raise Conflict('That M-Pesa receipt has already been used.')
+
+    plan = biz.plan
+    amount = plan.price_annual if cycle == 'annual' else plan.price_monthly
+    pay = MpesaPayment.objects.create(
+        business=biz, plan=plan, cycle=cycle, amount=amount,
+        phone='scanned', status='pending', checkout_request_id=f"SCAN-{receipt}")
+    pay.mpesa_receipt = receipt
+    until = _settle_success(biz, pay)
+    return Response({
+        'ok': True, 'plan': plan.name, 'amount': amount, 'mpesa_receipt': receipt,
+        'subscription': biz.subscription_info(), 'paid_until': until,
+    }, status=http.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([])
+def redeem_scan_bill(request):
+    """Staff confirms a customer's scan-to-pay on a verified bill: the receipt
+    code marks the bill paid (same once-only guarantee)."""
+    biz = get_business(request)
+    bill = Bill.objects.filter(code=request.data.get('code') or '', business=biz).first()
+    if not bill:
+        return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
+    if bill.status == 'pending':
+        raise Conflict('Customer has not verified this bill yet')
+    if bill.status != 'approved':
+        raise Conflict(f"Bill is {bill.status}")
+    receipt = str(request.data.get('receipt') or '').strip().upper()
+    if not SCAN_CODE_RE.match(receipt):
+        raise Invalid('Enter the M-Pesa receipt code from the confirmation SMS')
+    if _receipt_taken(receipt):
+        raise Conflict('That M-Pesa receipt has already been used.')
+
+    bill.status = 'paid'
+    bill.payment_method = 'M-Pesa scan'
+    bill.payment_ref = receipt
+    bill.paid_at = timezone.now()
+    bill.save(update_fields=['status', 'payment_method', 'payment_ref', 'paid_at'])
+    audit(bill, 'paid', f"KSh {bill.total} paid via scan-to-pay — receipt {receipt}")
+    return Response(BillSerializer(bill).data)
 
 
 # --- Owner analytics -----------------------------------------------------------

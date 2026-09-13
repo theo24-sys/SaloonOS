@@ -25,4 +25,6 @@ urlpatterns = [
     re_path(r'^api/analytics/?$', views.analytics),
     re_path(r'^api/invites/create/?$', views.invite_create),
     re_path(r'^api/invites/accept/?$', views.invite_accept),
+    re_path(r'^api/mpesa/redeem-plan/?$', views.redeem_scan_plan),
+    re_path(r'^api/mpesa/redeem-bill/?$', views.redeem_scan_bill),
 ]

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api, money, store, Subscription, Plan, MpesaPaymentRow, StkStatus } from "@/lib/api";
+import { MpesaTrustStrip, MpesaScanTile } from "@/app/mpesa";
 
 type Cycle = "monthly" | "annual";
 type Phase = "form" | "waiting" | "done" | "error";
@@ -28,6 +29,9 @@ export default function BillingPage() {
   const [statusMsg, setStatusMsg] = useState("");
   const [receipt, setReceipt] = useState("");
   const [history, setHistory] = useState<MpesaPaymentRow[]>([]);
+  const [scanCode, setScanCode] = useState("");
+  const [scanMsg, setScanMsg] = useState("");
+  const [scanOk, setScanOk] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadAll = useCallback((p: string) => {
@@ -89,6 +93,22 @@ export default function BillingPage() {
     }
   }
 
+  async function redeem(e: React.FormEvent) {
+    e.preventDefault();
+    setScanMsg("");
+    try {
+      const r = await api.redeemScanPlan(store.slug, store.pin, scanCode.trim());
+      setScanOk(true);
+      setScanMsg(`✓ KSh ${r.amount} applied — plan active until ${new Date(r.paid_until).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}.`);
+      setSub(r.subscription);
+      setScanCode("");
+      loadAll(store.pin);
+    } catch (err) {
+      setScanOk(false);
+      setScanMsg((err as Error).message);
+    }
+  }
+
   function unlock(e: React.FormEvent) {
     e.preventDefault();
     loadAll(pin);
@@ -125,18 +145,7 @@ export default function BillingPage() {
         <Link href="/owner" className="rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-dim">← Dashboard</Link>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-[#3AA335]/30 bg-gradient-to-r from-[#eaf7ec] via-[#f2faf3] to-[#e8f6ea] p-4">
-        <div className="flex items-center gap-3">
-          <img src="/mpesa-logo.png" alt="M-Pesa" className="h-10 w-10 rounded-lg border border-[#3AA335]/25 bg-white p-1" />
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-sm font-bold text-[#0b6e35]">
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#3AA335] text-[10px] text-white">✓</span>
-              Secured by M-Pesa
-            </p>
-            <p className="text-xs text-[#3f6b4d]">Official Safaricom Daraja payments · you approve every payment on your phone</p>
-          </div>
-        </div>
-      </div>
+      <MpesaTrustStrip note="Official Safaricom Daraja payments · you approve every payment on your phone" />
 
       {sub && (
         <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
@@ -219,31 +228,22 @@ export default function BillingPage() {
 
       {/* Scan-to-pay — the official Daraja QR sticker, for those who prefer
           paying from their M-Pesa app without an STK prompt. */}
-      <div className="mt-4 overflow-hidden rounded-2xl border border-[#3AA335]/35 bg-surface">
-        <div className="flex items-center gap-2 bg-[#3AA335] px-4 py-2.5">
-          <span className="text-lg">📱</span>
-          <div>
-            <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Scan to pay</p>
-            <p className="text-[11px] text-[#e2f5e5]">Lipa na Bonga via MY ONEAPP — or dial <span className="font-mono font-bold">*126#</span></p>
+      <MpesaScanTile />
+
+      {/* Already scanned? Redeem the receipt code directly — no human work. */}
+      {phase === "form" && (
+        <form onSubmit={redeem} className="mt-4 rounded-2xl border border-line bg-surface p-4">
+          <h2 className="font-display font-bold">Already paid by scanning the QR?</h2>
+          <p className="text-xs text-dim">Enter the receipt code from your M-Pesa SMS to activate your plan instantly.</p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input value={scanCode} onChange={(e) => setScanCode(e.target.value.toUpperCase())} placeholder="e.g. SJ84K2ABCD"
+              className="min-w-0 flex-1 rounded-xl border border-line bg-surface2 px-3 py-2.5 font-mono uppercase outline-none focus:border-brand" />
+            <button disabled={scanCode.trim().length < 8}
+              className="rounded-xl bg-[#3AA335] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">Apply to my plan</button>
           </div>
-        </div>
-        <div className="flex flex-col items-center gap-4 p-5 sm:flex-row sm:items-center">
-          <div className="rounded-2xl border-2 border-[#3AA335]/40 bg-white p-2 shadow-[0_12px_30px_-18px_rgba(11,110,53,0.55)]">
-            <img src="/mpesa-qr.png" alt="M-Pesa scan-to-pay QR" className="h-40 w-40 sm:h-44 sm:w-44" />
-          </div>
-          <div className="text-center sm:text-left">
-            <p className="font-display text-lg font-bold text-[#0b6e35]">MORGGY TECHNOLOGIES</p>
-            <p className="mt-1 text-sm text-dim">Prefer no prompt? Scan with your M-Pesa app and pay directly.</p>
-            <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#eaf7ec] px-3 py-1 text-sm font-bold text-[#0b6e35]">
-              Paybill <span className="font-mono">4567052</span>
-            </div>
-            <p className="mt-2 text-[11px] text-dim">Scan payments are confirmed to your plan by our team shortly after.</p>
-          </div>
-        </div>
-        <div className="border-t border-[#3AA335]/20 bg-[#f7fbf8] px-4 py-2.5 text-center text-[11px] font-semibold text-[#3f6b4d]">
-          Payments processed over Safaricom M-Pesa · receipt issued for every transaction
-        </div>
-      </div>
+          {scanMsg && <p className={`mt-2 text-sm ${scanOk ? "text-good" : "text-bad"}`}>{scanMsg}</p>}
+        </form>
+      )}
 
       {history.length > 0 && (
         <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-surface p-4">

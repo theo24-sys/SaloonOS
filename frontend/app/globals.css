@@ -77,6 +77,11 @@ input::placeholder { color: var(--color-dim); }
 /* Print/PDF: the receipt is the page */
 @media print {
   .aurora, header, footer, .no-print { display: none !important; }
+  /* M-Pesa trust strip stays subtle on paper (no heavy green wash) */
+  main .overflow-hidden.rounded-2xl[class*="from-[#eaf7ec]"] {
+    background: white !important;
+    border-color: #d9d4cf !important;
+  }
   body { background: white; }
   main { padding: 0 !important; max-width: 30rem !important; margin: 0 auto !important; }
   .shadow-\[0_20px_50px_-24px_rgba\(93\,58\,88\,0\.35\)\] { box-shadow: none !important; }
