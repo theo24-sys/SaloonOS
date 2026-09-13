@@ -51,7 +51,7 @@ services:
       - key: MPESA_SHORTCODE
         sync: false
       - key: MPESA_TRANSACTION_TYPE
-        value: "CustomerBuyGoodsOnline"
+        value: "CustomerPayBillOnline"
       - key: MPESA_ENVIRONMENT
         value: "production"
       - key: MPESA_SIMULATE
