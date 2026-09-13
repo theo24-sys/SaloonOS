@@ -3,5 +3,6 @@ django-cors-headers==4.9.0
 djangorestframework==3.18.1
 psycopg2-binary==2.9.13
 qrcode==8.2
+pillow>=10.0.0
 gunicorn==23.0.0
 whitenoise==6.9.0

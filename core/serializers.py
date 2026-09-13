@@ -2,6 +2,7 @@ import io
 import base64
 
 import qrcode
+from qrcode.image.pil import PilImage
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -30,7 +31,7 @@ def audit(bill, type_, detail=''):
 
 def make_qr_data_url(business_slug, code):
     url = f"{settings_public_base_url()}/v/{code}?b={business_slug}"
-    img = qrcode.make(url, box_size=10, border=2)
+    img = qrcode.make(url, image_factory=PilImage, box_size=10, border=2)
     buf = io.BytesIO()
     img.save(buf, format='PNG')
     return 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode(), url

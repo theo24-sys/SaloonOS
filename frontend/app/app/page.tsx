@@ -35,13 +35,19 @@ export default function StaffApp() {
   const [scanOpen, setScanOpen] = useState(false);
   const [scanCode, setScanCode] = useState("");
   const [scanErr, setScanErr] = useState("");
+  const [switchOpen, setSwitchOpen] = useState(false);
+  const [switchSlug, setSwitchSlug] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(() => {
     api.catalog(store.slug).then((c) => {
       setCat(c);
+      setErr("");
       setStaffId((s) => s || c.staff[0]?.id || "");
-    }).catch((e) => setErr(e.message));
+    }).catch((e) => {
+      setCat(null);
+      setErr(e.message);
+    });
   }, []);
   useEffect(load, [load]);
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
@@ -178,10 +184,25 @@ export default function StaffApp() {
       )}
       {!bill ? (
         <>
-          <h1 className="font-display text-2xl font-bold">New bill <span className="text-base font-medium text-dim">— {cat.business.name}</span></h1>
-          <p className="mt-0.5 text-xs text-dim">
-            {cat.business.plan.name} plan · {cat.business.plan.monthly_verified_bills} verified bills/mo
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-bold">
+                New bill <span className="text-base font-medium text-dim">— {cat.business.name}</span>
+              </h1>
+              <p className="mt-0.5 text-xs text-dim">
+                {cat.business.plan.name} plan · {cat.business.plan.monthly_verified_bills} verified bills/mo
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setSwitchSlug(store.slug);
+                setSwitchOpen(true);
+              }}
+              className="rounded-lg border border-line bg-surface2 px-2.5 py-1 text-xs font-semibold text-dim hover:border-brand hover:text-ink"
+            >
+              Switch salon ⇄
+            </button>
+          </div>
 
           <div className="mt-4 space-y-3 rounded-2xl border border-line bg-surface p-4">
             <input
@@ -337,6 +358,51 @@ export default function StaffApp() {
           <button onClick={reset} className="mt-4 w-full rounded-xl border border-line bg-surface2 py-2.5 text-sm font-bold">
             {bill.status === "paid" ? "Next customer" : "Back"}
           </button>
+        </div>
+      )}
+
+      {switchOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-5 shadow-xl">
+            <h3 className="font-display font-bold text-base">Switch Salon</h3>
+            <p className="mt-1 text-xs text-dim">
+              Enter your salon&apos;s unique slug identifier (e.g. <code className="font-mono">treezy</code> or <code className="font-mono">xyz-salon</code>).
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const slug = switchSlug.trim().toLowerCase();
+                if (!slug) return;
+                store.slug = slug;
+                setSwitchOpen(false);
+                load();
+              }}
+              className="mt-4 space-y-3"
+            >
+              <input
+                value={switchSlug}
+                onChange={(e) => setSwitchSlug(e.target.value)}
+                placeholder="e.g. treezy"
+                className="w-full rounded-xl border border-line bg-surface2 px-3 py-2 text-sm outline-none focus:border-brand"
+                required
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSwitchOpen(false)}
+                  className="flex-1 rounded-xl border border-line py-2 text-xs font-semibold text-dim"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 rounded-xl bg-plum py-2 text-xs font-bold text-white hover:bg-[#4d2f48]"
+                >
+                  Open Salon
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
