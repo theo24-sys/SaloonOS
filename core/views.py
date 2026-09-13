@@ -1,5 +1,6 @@
 import calendar
 import hashlib
+import logging
 import random
 import re
 import secrets
@@ -20,6 +21,8 @@ from .models import (Plan, Business, StaffMember, Service, Bill, BillItem,
 from .mpesa import DarajaError, stk_push, stk_query, normalize_phone
 from .serializers import (PlanSerializer, BusinessSerializer, BillSerializer,
                           ServiceSerializer, StaffSerializer, audit)
+
+logger = logging.getLogger(__name__)
 
 
 class Invalid(APIException):
@@ -432,6 +435,9 @@ def mpesa_stk(request):
         raise Invalid('Unknown plan')
 
     amount = plan.price_annual if cycle == 'annual' else plan.price_monthly
+    logger.info("mpesa_initiate business=%s plan=%s cycle=%s amount=%s phone_suffix=%s environment=%s simulated=%s callback_configured=%s",
+                biz.slug, plan.code, cycle, amount, phone[-4:], settings.MPESA_ENVIRONMENT,
+                settings.MPESA_SIMULATE, bool(settings.MPESA_CALLBACK_URL))
     if not settings.MPESA_CALLBACK_URL and not settings.MPESA_SIMULATE:
         raise Invalid('MPESA_CALLBACK_URL is not configured on the server')
 
@@ -443,6 +449,7 @@ def mpesa_stk(request):
             f'SaloonOS {plan.name} {cycle}',
             settings.MPESA_CALLBACK_URL)
     except DarajaError as e:
+        logger.error("mpesa_initiate_failed business=%s error=%s", biz.slug, e)
         pay.status = 'failed'
         pay.result_desc = str(e)[:255]
         pay.save(update_fields=['status', 'result_desc'])
@@ -451,6 +458,8 @@ def mpesa_stk(request):
     pay.checkout_request_id = checkout_id
     pay.merchant_request_id = merchant_id or ''
     pay.save(update_fields=['checkout_request_id', 'merchant_request_id'])
+    logger.info("mpesa_payment_created payment_id=%s business=%s checkout_suffix=%s",
+                pay.id, biz.slug, checkout_id[-10:])
     return Response({
         'payment_id': pay.id,
         'checkout_request_id': checkout_id,
@@ -476,8 +485,12 @@ def mpesa_status(request, payment_id):
     if pay.status == 'pending' and not settings.MPESA_SIMULATE:
         try:
             rc = stk_query(pay.checkout_request_id)
-        except DarajaError:
+        except DarajaError as e:
+            logger.warning("mpesa_status_query_failed payment_id=%s checkout_suffix=%s error=%s",
+                           pay.id, pay.checkout_request_id[-10:], e)
             rc = None
+        logger.info("mpesa_status_observed payment_id=%s stored_status=%s query_result=%s",
+                    pay.id, pay.status, rc)
         if rc == '0':
             _settle_success(biz, pay)
         elif rc not in (None, 'PENDING'):
@@ -511,17 +524,24 @@ def mpesa_callback(request):
     items = {i.get('Name'): i.get('Value') for i in stk.get('CallbackMetadata', {}).get('Item', [])}
     receipt = str(items.get('MpesaReceiptNumber', ''))
     amount = int(items.get('Amount', 0) or 0)
+    logger.info("mpesa_callback_received method=%s checkout_suffix=%s result_code=%s description=%s amount=%s keys=%s",
+                request.method, str(checkout_id)[-10:] if checkout_id else "none",
+                result_code or "missing", result_desc[:120], amount, sorted(stk.keys()))
 
     if not checkout_id:
+        logger.warning("mpesa_callback_ignored reason=missing_checkout_id")
         return Response({'ResultCode': 0, 'ResultDesc': 'Ignored: no CheckoutRequestID'})
 
     pay = MpesaPayment.objects.filter(checkout_request_id=checkout_id).select_related('business').first()
     if not pay:
+        logger.warning("mpesa_callback_ignored reason=unknown_checkout checkout_suffix=%s",
+                       checkout_id[-10:])
         return Response({'ResultCode': 0, 'ResultDesc': 'Unknown checkout — ignored'})
 
     # Optional shared-secret gate (set MPESA_CALLBACK_TOKEN to enable).
     expected = getattr(settings, 'MPESA_CALLBACK_TOKEN', '')
     if expected and token != expected:
+        logger.warning("mpesa_callback_rejected payment_id=%s reason=bad_token", pay.id)
         return Response({'ResultCode': 0, 'ResultDesc': 'Rejected: bad token'})
 
     if pay.status == 'pending':
@@ -531,11 +551,17 @@ def mpesa_callback(request):
                 pay.status = 'failed'
                 pay.completed_at = timezone.now()
                 pay.save(update_fields=['result_desc', 'status', 'completed_at'])
+                logger.error("mpesa_callback_amount_mismatch payment_id=%s expected=%s received=%s",
+                             pay.id, pay.amount, amount)
             else:
                 pay.mpesa_receipt = receipt
                 _settle_success(pay.business, pay)
+                logger.info("mpesa_callback_success payment_id=%s receipt_present=%s",
+                            pay.id, bool(receipt))
         else:
             _settle_failure(pay.business, pay, result_code, result_desc)
+            logger.warning("mpesa_callback_failure payment_id=%s result_code=%s description=%s",
+                           pay.id, result_code, result_desc[:160])
 
     return Response({'ResultCode': 0, 'ResultDesc': 'Accepted'})
 

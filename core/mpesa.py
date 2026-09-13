@@ -6,6 +6,7 @@ token warm across requests; the lock avoids stampedes on cold instances.
 """
 import base64
 import json
+import logging
 import threading
 import time
 from datetime import datetime
@@ -13,6 +14,8 @@ from urllib import request as urlrequest
 from urllib.error import HTTPError, URLError
 
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class DarajaError(Exception):
@@ -38,11 +41,18 @@ def _http_json(url, payload=None, headers=None, timeout=15):
         req.add_header(k, v)
     try:
         with urlrequest.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode())
+            data = json.loads(resp.read().decode())
+            logger.info("mpesa_provider_response endpoint=%s status=%s keys=%s",
+                        url.split(".co.ke")[-1], resp.status, sorted(data.keys()))
+            return data
     except HTTPError as e:
         detail = e.read().decode(errors='replace')[:300]
+        logger.error("mpesa_provider_http_error endpoint=%s status=%s detail=%s",
+                     url.split(".co.ke")[-1], e.code, detail)
         raise DarajaError(f"Daraja HTTP {e.code}: {detail}") from e
     except (URLError, TimeoutError, OSError) as e:
+        logger.error("mpesa_provider_network_error endpoint=%s error=%s",
+                     url.split(".co.ke")[-1], e)
         raise DarajaError(f"Daraja unreachable: {e}") from e
 
 
@@ -52,6 +62,7 @@ def access_token():
         if _token_cache['token'] and time.time() < _token_cache['expires_at']:
             return _token_cache['token']
         if not (settings.MPESA_CONSUMER_KEY and settings.MPESA_CONSUMER_SECRET):
+            logger.error("mpesa_config_error missing_consumer_credentials")
             raise DarajaError('MPESA_CONSUMER_KEY / MPESA_CONSUMER_SECRET not configured')
         creds = base64.b64encode(
             f"{settings.MPESA_CONSUMER_KEY}:{settings.MPESA_CONSUMER_SECRET}".encode()
@@ -63,6 +74,8 @@ def access_token():
         _token_cache['token'] = data['access_token']
         # expire a minute early for safety
         _token_cache['expires_at'] = time.time() + int(data.get('expires_in', 3599)) - 60
+        logger.info("mpesa_token_obtained environment=%s base=%s",
+                    settings.MPESA_ENVIRONMENT, settings.MPESA_BASE)
         return _token_cache['token']
 
 
@@ -91,6 +104,7 @@ def stk_push(phone, amount, account_reference, description, callback_url):
         raise DarajaError('Amount must be at least KSh 1')
 
     if settings.MPESA_SIMULATE:
+        logger.warning("mpesa_stk_simulated environment=%s", settings.MPESA_ENVIRONMENT)
         return f'SIM-{msisdn}-{int(time.time())}', 'SIM-MR-0000'
 
     password, timestamp = _password()
@@ -112,7 +126,12 @@ def stk_push(phone, amount, account_reference, description, callback_url):
         headers={'Authorization': f'Bearer {access_token()}'},
     )
     if data.get('ResponseCode') != '0':
+        logger.error("mpesa_stk_rejected response_code=%s error=%s",
+                     data.get('ResponseCode'), data.get('errorMessage') or data.get('ResponseDescription'))
         raise DarajaError(data.get('errorMessage') or f"STK rejected: {data}")
+    logger.info("mpesa_stk_accepted response_code=%s checkout_suffix=%s merchant_suffix=%s",
+                data.get('ResponseCode'), str(data.get('CheckoutRequestID', ''))[-10:],
+                str(data.get('MerchantRequestID', ''))[-10:])
     return data['CheckoutRequestID'], data['MerchantRequestID']
 
 
@@ -132,6 +151,8 @@ def stk_query(checkout_request_id):
         },
         headers={'Authorization': f'Bearer {access_token()}'},
     )
+    logger.info("mpesa_query_response checkout_suffix=%s result_code=%s error_code=%s",
+                checkout_request_id[-10:], data.get('ResultCode'), data.get('errorCode'))
     if data.get('errorCode'):
         # 500.001.1001 = "The transaction is being processed" → still pending
         if data['errorCode'] == '500.001.1001':
