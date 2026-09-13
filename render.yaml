@@ -1,19 +1,19 @@
-# Render Blueprint — deploys the whole stack in one click:
-#   render blueprint launch   (or: New → Blueprint in the Render dashboard)
+# Render Blueprint — SaloonOS on Render's FREE web services + Supabase Postgres.
+#   Render dashboard → New → Blueprint → pick the repo
 #
-# Creates: managed Postgres + Django API (gunicorn) + Next.js frontend.
-# After the first deploy: run the seed once from the API service shell:
-#   python seed_demo.py
-
-databases:
-  - name: serviceproof-db
-    databaseName: serviceproof
-    user: serviceproof
-    plan: basic-256mb
+# No credit card needed: the database is NOT provisioned here (that's the paid
+# piece). Create a free Postgres on supabase.com first, then paste its
+# connection string when the blueprint asks for DATABASE_URL.
+#
+# Creates:
+#   saloonos-api — Django under gunicorn (migrate + collectstatic on every deploy)
+#   saloonos-web — Next.js, proxying /api/* to the API service (one origin, no CORS)
+#
+# After the first deploy (optional demo data): API service → Shell → python seed_demo.py
 
 services:
   - type: web
-    name: serviceproof-api
+    name: saloonos-api
     runtime: python
     rootDir: .
     plan: free
@@ -21,13 +21,11 @@ services:
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
       python manage.py migrate --noinput
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 30
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 30
     healthCheckPath: /api/plans
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: serviceproof-db
-          property: connectionString
+        sync: false           # paste your Supabase "Session pooler" connection string
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
@@ -36,15 +34,15 @@ services:
         value: "3.12.7"
       - key: ALLOWED_HOSTS
         value: ".onrender.com"
-      # Points QR codes at the frontend — replace <name> after the first deploy
-      # if you rename services, or set your own domain here.
+      # QR codes point here — replace <name> after first deploy if you rename,
+      # or set your own domain.
       - key: PUBLIC_BASE_URL
         sync: false
       - key: CORS_ALLOWED_ORIGINS
         sync: false
 
   - type: web
-    name: serviceproof-web
+    name: saloonos-web
     runtime: node
     rootDir: frontend
     plan: free
@@ -54,7 +52,7 @@ services:
       # Next.js proxies /api/* to the Django service — one origin, no CORS.
       - key: API_ORIGIN
         fromService:
-          name: serviceproof-api
+          name: saloonos-api
           type: web
           property: hostport
       - key: NODE_VERSION

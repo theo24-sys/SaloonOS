@@ -5,7 +5,7 @@ match the local dev setup so `manage.py runserver` works unchanged.
 """
 import os
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -47,13 +47,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 def _db_from_url(url):
-    """Parse a postgres:// DATABASE_URL into Django settings (no extra deps)."""
+    """Parse a postgres:// DATABASE_URL into Django settings (no extra deps).
+    User/password are URL-unquoted so hosted pooler strings like
+    postgresql://postgres.abc:P%40ss@host:5432/postgres work as pasted."""
     u = urlparse(url)
     return {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': u.path.lstrip('/'),
-        'USER': u.username or '',
-        'PASSWORD': u.password or '',
+        'NAME': unquote(u.path.lstrip('/')),
+        'USER': unquote(u.username or ''),
+        'PASSWORD': unquote(u.password or ''),
         'HOST': u.hostname or '',
         'PORT': u.port or 5432,
         'CONN_MAX_AGE': 60,
