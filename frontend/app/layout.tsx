@@ -33,8 +33,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${playfair.variable} ${jost.variable} antialiased`}>
         <div className="aurora" aria-hidden />
-        <AppChrome />
-        {children}
+        <AppChrome>{children}</AppChrome>
       </body>
     </html>
   );

@@ -4,11 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export default function AppChrome() {
+export default function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isStaffOrCustomer = pathname === "/app" || pathname.startsWith("/v/") || pathname.startsWith("/r/");
 
-  if (isStaffOrCustomer) return null;
+  if (isStaffOrCustomer) return <>{children}</>;
 
   return (
     <>
@@ -29,6 +29,7 @@ export default function AppChrome() {
           </nav>
         </div>
       </header>
+      {children}
       <footer className="no-print mx-auto max-w-2xl px-5 py-10 text-center text-xs text-dim space-y-3">
         <Image src="/favicon.png" alt="" width={24} height={24} className="mx-auto h-6 w-6 opacity-70" />
         <div>
