@@ -39,9 +39,11 @@ C=$(curl -s $B/catalog -H "X-SP-Business: $SLUG")
 check "services seeded" 'Jane' "$C"
 STAFF_ID=$(echo "$C" | python3 -c "import sys,json;print(json.load(sys.stdin)['staff'][0]['id'])")
 
-echo "== staff cap (starter = 2) =="
-A3=$(curl -s -X POST $B/staff/add -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' -H 'X-SP-PIN: 4321' -d '{"name":"Zawadi"}')
-check "3rd staff blocked with 402" 'Upgrade' "$A3"
+echo "== staff cap (starter = 4) =="
+curl -s -X POST $B/staff/add -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' -H 'X-SP-PIN: 4321' -d '{"name":"Zawadi"}' >/dev/null
+curl -s -X POST $B/staff/add -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' -H 'X-SP-PIN: 4321' -d '{"name":"Mercy"}' >/dev/null
+A5=$(curl -s -X POST $B/staff/add -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' -H 'X-SP-PIN: 4321' -d '{"name":"Fatuma"}')
+check "5th staff blocked with 402" 'Upgrade' "$A5"
 
 echo "== create bill =="
 BILL=$(curl -s -X POST $B/bills -H "X-SP-Business: $SLUG" -H 'Content-Type: application/json' \

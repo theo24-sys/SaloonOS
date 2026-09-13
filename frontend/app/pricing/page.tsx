@@ -58,7 +58,7 @@ export default function Pricing() {
               <span className="text-sm font-semibold text-dim">/{annual ? "yr" : "mo"}</span>
             </div>
             <div className="mt-1 text-xs text-dim">
-              {p.monthly_verified_bills.toLocaleString()} verified bills/mo · {p.max_staff} staff
+              {p.monthly_verified_bills.toLocaleString()} verified bills/mo · {p.max_staff >= 20 ? "20+ staff" : `${p.max_staff} staff`}
             </div>
             <ul className="mt-3 space-y-1 text-sm">
               {p.features.map((f) => (
