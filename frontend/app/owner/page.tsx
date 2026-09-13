@@ -22,6 +22,7 @@ export default function OwnerDash() {
   const [analyticsData, setAnalyticsData] = useState<Analytics | null>(null);
   const [inviteUrl, setInviteUrl] = useState("");
   const [inviteName, setInviteName] = useState("");
+  const [invitePin, setInvitePin] = useState("");
 
   const load = useCallback((p: string) => {
     setErr("");
@@ -50,10 +51,11 @@ export default function OwnerDash() {
     const name = inviteName.trim();
     if (!name) return;
     try {
-      const r = await api.inviteCreate(store.slug, store.pin, name);
+      const r = await api.inviteCreate(store.slug, store.pin, name, invitePin);
       const invitePath = new URL(r.url).pathname + new URL(r.url).search;
       setInviteUrl(`${window.location.origin}${invitePath}`);
       setInviteName("");
+      setInvitePin("");
       load(store.pin);
     } catch (e) {
       alert((e as Error).message);
@@ -272,11 +274,13 @@ export default function OwnerDash() {
       {/* Team — invites */}
       <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
         <h2 className="font-display font-bold">Team</h2>
-        <p className="text-xs text-dim">Staff sign in with a link you create here — no passwords to forget.</p>
+        <p className="text-xs text-dim">Assign each staff member a PIN. They will need the invite link and PIN to sign in.</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Staff name (e.g. Faith)"
             className="flex-1 rounded-xl border border-line bg-surface2 px-3 py-2.5 outline-none focus:border-brand" />
-          <button onClick={createInvite} disabled={!inviteName.trim()}
+          <input value={invitePin} onChange={(e) => setInvitePin(e.target.value.replace(/\D/g, "").slice(0, 8))} inputMode="numeric" placeholder="PIN (4–8 digits)"
+            className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 outline-none focus:border-brand sm:w-40" />
+          <button onClick={createInvite} disabled={!inviteName.trim() || invitePin.length < 4}
             className="rounded-xl bg-plum px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">Create invite link</button>
         </div>
         {inviteUrl && (

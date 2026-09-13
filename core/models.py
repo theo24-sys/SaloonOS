@@ -71,6 +71,7 @@ class StaffMember(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='staff')
     name = models.CharField(max_length=80)
     role = models.CharField(max_length=20, default='staff')  # staff | manager
+    staff_pin = models.CharField(max_length=8, blank=True, default='')
 
     class Meta:
         unique_together = ('business', 'name')
@@ -156,6 +157,7 @@ class StaffInvite(models.Model):
     once used or revoked."""
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='staff_invites')
     name = models.CharField(max_length=80)
+    staff_pin = models.CharField(max_length=8)
     code = models.CharField(max_length=12, unique=True)
     created_by_pin = models.CharField(max_length=8)   # owner PIN at issuance (audit context)
     used = models.BooleanField(default=False)

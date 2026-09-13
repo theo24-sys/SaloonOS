@@ -33,6 +33,9 @@ export default function StaffApp() {
   const [toast, setToast] = useState("");
   const [invite, setInvite] = useState<{ code: string; name: string } | null>(null);
   const [inviteMsg, setInviteMsg] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [invitePin, setInvitePin] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanCode, setScanCode] = useState("");
   const [scanErr, setScanErr] = useState("");
@@ -65,21 +68,28 @@ export default function StaffApp() {
       setAuthReady(true);
       return;
     }
-    api.inviteAccept(code)
-      .then((r) => {
-        store.slug = r.business.slug;
-        setInvite({ code, name: r.staff.name });
-        store.staffToken = r.token;
-        setInviteMsg(`Welcome, ${r.staff.name} — you're signed in to ${r.business.name}.`);
-        window.history.replaceState({}, "", "/app");
-        load();
-        setAuthReady(true);
-      })
-      .catch((e) => {
-        setInviteMsg(e.message);
-        setAuthReady(true);
-      });
+    setInviteCode(code);
+    setAuthReady(true);
   }, [load]);
+
+  async function acceptInvite(e: React.FormEvent) {
+    e.preventDefault();
+    setInviteBusy(true);
+    setInviteMsg("");
+    try {
+      const r = await api.inviteAccept(inviteCode, invitePin);
+      store.slug = r.business.slug;
+      store.staffToken = r.token;
+      setInvite({ code: inviteCode, name: r.staff.name });
+      setInviteMsg(`Welcome, ${r.staff.name} — you're signed in to ${r.business.name}.`);
+      window.history.replaceState({}, "", "/app");
+      load();
+    } catch (e) {
+      setInviteMsg((e as Error).message);
+    } finally {
+      setInviteBusy(false);
+    }
+  }
 
   const total = items.reduce((s, it) => s + (Number(it.price) || 0), 0);
 
@@ -188,6 +198,26 @@ export default function StaffApp() {
     );
   }
   if (!authReady || (!cat && !err)) return <main className="mx-auto max-w-md px-5 py-10 text-dim">Opening Staff POS…</main>;
+
+  if (inviteCode && !store.staffToken) {
+    return (
+      <main className="mx-auto max-w-md px-5 py-16">
+        <form onSubmit={acceptInvite} className="rounded-3xl border border-line bg-surface p-7 shadow-[0_18px_45px_-28px_rgba(93,58,88,0.45)]">
+          <div className="text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f8e9f0] text-2xl text-plum">✦</div>
+            <h1 className="font-display mt-4 text-2xl font-bold">Staff sign in</h1>
+            <p className="mt-2 text-sm leading-6 text-dim">Enter the PIN assigned by your salon owner to activate this invite.</p>
+          </div>
+          <input value={invitePin} onChange={(e) => setInvitePin(e.target.value.replace(/\D/g, "").slice(0, 8))} inputMode="numeric" type="password" placeholder="Staff PIN"
+            className="mt-5 w-full rounded-xl border border-line bg-surface2 px-3 py-3 text-center text-xl tracking-[0.4em] outline-none focus:border-brand" autoFocus required minLength={4} />
+          {inviteMsg && <p className="mt-2 text-center text-sm text-bad">{inviteMsg}</p>}
+          <button disabled={inviteBusy} className="mt-4 w-full rounded-xl bg-plum px-4 py-3 font-bold text-white disabled:opacity-50">
+            {inviteBusy ? "Signing in…" : "Open Staff POS"}
+          </button>
+        </form>
+      </main>
+    );
+  }
 
   if (!cat && !store.staffToken && !store.pin) {
     return (

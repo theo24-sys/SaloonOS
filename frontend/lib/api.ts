@@ -264,16 +264,16 @@ export const api = {
     }),
   analytics: (slug: string, pin: string) =>
     req<Analytics>("/api/analytics/", { headers: { "X-SP-Business": slug, "X-SP-PIN": pin } }),
-  inviteCreate: (slug: string, pin: string, name: string) =>
+  inviteCreate: (slug: string, pin: string, name: string, staffPin: string) =>
     req<{ code: string; url: string; name: string }>("/api/invites/create/", {
       method: "POST",
       headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, staff_pin: staffPin }),
     }),
-  inviteAccept: (code: string) =>
+  inviteAccept: (code: string, staffPin: string) =>
     req<{ business: { name: string; slug: string }; staff: { id: number; name: string }; token: string }>("/api/invites/accept/", {
       method: "POST",
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, staff_pin: staffPin }),
     }),
   redeemScanPlan: (slug: string, pin: string, receipt: string, cycle: "monthly" | "annual" = "monthly") =>
     req<{ ok: boolean; plan: string; amount: number; mpesa_receipt: string; subscription: Subscription; paid_until: string }>("/api/mpesa/redeem-plan/", {

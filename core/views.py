@@ -712,13 +712,17 @@ def invite_create(request):
     biz = get_business(request)
     require_owner_pin(request, biz)
     name = (request.data.get('name') or '').strip()
+    staff_pin = str(request.data.get('staff_pin') or '').strip()
     if not name:
         raise Invalid('name required')
+    if not staff_pin.isdigit() or not 4 <= len(staff_pin) <= 8:
+        raise Invalid('staff_pin must be 4 to 8 digits')
     if biz.staff.count() >= biz.plan.max_staff:
         raise PaymentRequired(
             f"Your {biz.plan.name} plan allows {biz.plan.max_staff} staff. Upgrade to add more.")
     inv = StaffInvite.objects.create(
-        business=biz, name=name, code=gen_code() + gen_code(), created_by_pin=biz.owner_pin)
+        business=biz, name=name, staff_pin=staff_pin,
+        code=gen_code() + gen_code(), created_by_pin=biz.owner_pin)
     return Response({
         'code': inv.code,
         'url': f"{settings.PUBLIC_BASE_URL.rstrip('/')}/app?invite={inv.code}",
@@ -732,11 +736,20 @@ def invite_accept(request):
     """Staff member accepts an invite: creates the staff record.
     The business slug comes from the invite itself — no headers needed."""
     code = (request.data.get('code') or '').strip()
+    staff_pin = str(request.data.get('staff_pin') or '').strip()
     inv = StaffInvite.objects.select_related('business').filter(code=code, used=False).first()
     if not inv:
         return Response({'error': 'This invite link is invalid or already used.'},
                         status=http.HTTP_400_BAD_REQUEST)
-    member, created = StaffMember.objects.get_or_create(business=inv.business, name=inv.name)
+    if staff_pin != inv.staff_pin:
+        return Response({'error': 'Incorrect staff PIN.'}, status=http.HTTP_401_UNAUTHORIZED)
+    member, created = StaffMember.objects.get_or_create(
+        business=inv.business, name=inv.name,
+        defaults={'staff_pin': inv.staff_pin},
+    )
+    if member.staff_pin != inv.staff_pin:
+        member.staff_pin = inv.staff_pin
+        member.save(update_fields=['staff_pin'])
     raw_token = secrets.token_urlsafe(32)
     StaffSession.objects.create(
         business=inv.business,
