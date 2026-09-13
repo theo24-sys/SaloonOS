@@ -23,7 +23,6 @@ export default function Home() {
 
   useEffect(() => {
     if (store.pin) router.replace("/owner");
-    else if (store.staffToken && store.slug) router.replace("/app");
     else setCheckingSession(false);
   }, [router]);
 
