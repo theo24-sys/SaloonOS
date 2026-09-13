@@ -326,10 +326,4 @@ export const store = {
   set pin(v: string) {
     localStorage.setItem("sp_pin", v);
   },
-  get adminKey() {
-    return safeGet("sp_admin_key") || "";
-  },
-  set adminKey(v: string) {
-    localStorage.setItem("sp_admin_key", v);
-  },
 };

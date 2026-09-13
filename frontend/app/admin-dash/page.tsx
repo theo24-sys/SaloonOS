@@ -43,15 +43,6 @@ export default function PlatformAdminDashboard() {
   const [actionMsg, setActionMsg] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Load saved key on mount
-  useEffect(() => {
-    const saved = store.adminKey || "saloonos-master-2026";
-    if (saved) {
-      setAdminKey(saved);
-      setKeyInput(saved);
-    }
-  }, []);
-
   const loadData = useCallback(
     async (k: string) => {
       if (!k) return;
@@ -66,9 +57,9 @@ export default function PlatformAdminDashboard() {
         setOverview(ov);
         setBusinesses(bizRes.businesses);
         setPayments(payRes.payments);
-        store.adminKey = k;
       } catch (err) {
         setAuthError((err as Error).message);
+        setAdminKey("");
       } finally {
         setLoading(false);
       }
@@ -171,9 +162,6 @@ export default function PlatformAdminDashboard() {
               {loading ? "Authenticating…" : "Unlock Dashboard"}
             </button>
           </form>
-          <p className="mt-4 text-center text-[11px] text-dim">
-            Default Key: <code className="rounded bg-surface2 px-1 py-0.5 font-mono">saloonos-master-2026</code>
-          </p>
         </div>
       </main>
     );
@@ -204,8 +192,11 @@ export default function PlatformAdminDashboard() {
           </button>
           <button
             onClick={() => {
-              store.adminKey = "";
               setAdminKey("");
+              setKeyInput("");
+              setOverview(null);
+              setBusinesses([]);
+              setPayments([]);
             }}
             className="rounded-xl border border-bad/30 bg-bad/5 px-3 py-2 text-xs font-semibold text-bad hover:bg-bad/10"
           >
