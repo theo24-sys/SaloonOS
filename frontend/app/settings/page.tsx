@@ -50,7 +50,7 @@ export default function Settings() {
   }
 
   const previewBranding = {
-    name: catalog?.business.name || "Your Salon", tagline, phone, location, accent, thank_you: thankYou,
+    name: catalog?.business.name || "Your Salon", tagline, phone, location, accent, thank_you: thankYou, logo_data_url: logo,
   };
   const previewBill = {
     code: "SV48291", customer_name: "Mary Wanjiku", staff_name: "Jane", status: "paid",
@@ -65,8 +65,8 @@ export default function Settings() {
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-8">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-5 rounded-3xl border border-line bg-surface p-5 shadow-[0_16px_40px_-28px_rgba(93,58,88,0.35)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="order-2 sm:order-1">
           <label className="text-sm font-semibold text-dim">Salon logo</label>
           <div className="mt-2 flex items-center gap-3">
             {logo ? (
@@ -97,11 +97,11 @@ export default function Settings() {
           </div>
           <p className="mt-1 text-xs text-dim">PNG, JPG or WebP · max 500 KB · shown on customer receipts</p>
         </div>
-        <div>
+        <div className="order-1 sm:order-2 sm:text-right">
           <h1 className="font-display text-2xl font-bold">Appearance</h1>
           <p className="text-sm text-dim">Make receipts feel like your salon&apos;s — the verified stamp stays ours.</p>
         </div>
-        <Link href="/owner" className="shrink-0 whitespace-nowrap rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-dim">← Dashboard</Link>
+        <Link href="/owner" className="order-3 shrink-0 whitespace-nowrap rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-dim">← Dashboard</Link>
       </div>
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">

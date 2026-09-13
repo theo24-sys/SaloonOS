@@ -1,5 +1,6 @@
 import io
 import base64
+from PIL import Image
 
 import qrcode
 from qrcode.image.pil import PilImage
@@ -29,9 +30,22 @@ def audit(bill, type_, detail=''):
     AuditEvent.objects.create(bill=bill, type=type_, detail=detail)
 
 
-def make_qr_data_url(business_slug, code, request=None):
+def make_qr_data_url(business_slug, code, request=None, logo_data_url=''):
     url = f"{settings_public_base_url(request)}/v/{code}?b={business_slug}"
-    img = qrcode.make(url, image_factory=PilImage, box_size=10, border=2)
+    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_H, box_size=10, border=2)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(image_factory=PilImage).convert('RGB')
+    if logo_data_url and logo_data_url.startswith('data:image/'):
+        try:
+            logo = Image.open(io.BytesIO(base64.b64decode(logo_data_url.split(',', 1)[1]))).convert('RGBA')
+            logo.thumbnail((img.width // 5, img.height // 5), Image.Resampling.LANCZOS)
+            pad = 10
+            tile = Image.new('RGB', (logo.width + pad * 2, logo.height + pad * 2), 'white')
+            tile.paste(logo, (pad, pad), logo)
+            img.paste(tile, ((img.width - tile.width) // 2, (img.height - tile.height) // 2))
+        except (ValueError, OSError):
+            pass
     buf = io.BytesIO()
     img.save(buf, format='PNG')
     return 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode(), url
@@ -79,12 +93,12 @@ class BillSerializer(serializers.ModelSerializer):
 
     def get_qr_data_url(self, obj):
         request = self.context.get('request')
-        data_url, _ = make_qr_data_url(obj.business.slug, obj.code, request)
+        data_url, _ = make_qr_data_url(obj.business.slug, obj.code, request, obj.business.logo_data_url)
         return data_url
 
     def get_verify_url(self, obj):
         request = self.context.get('request')
-        _, url = make_qr_data_url(obj.business.slug, obj.code, request)
+        _, url = make_qr_data_url(obj.business.slug, obj.code, request, obj.business.logo_data_url)
         return url
 
 

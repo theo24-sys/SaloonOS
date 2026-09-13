@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { api, Analytics, Dashboard, money, store } from "@/lib/api";
 import { Badge } from "@/app/receipt";
+import { Icon } from "@/app/icons";
 // Badge renders status chips for both pages
 
 const EV_ICON: Record<string, string> = {
@@ -124,17 +125,17 @@ export default function OwnerDash() {
           <p className="text-sm text-dim">{data.business.name}</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/pay" className="rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-dim">
-            💳 Billing
+          <Link href="/pay" className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-dim">
+          <Icon name="billing" size={16} /> Billing
           </Link>
-          <Link href="/settings" className="rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-dim">
-            ⚙︎
+          <Link href="/settings" aria-label="Settings" className="inline-flex items-center justify-center rounded-xl border border-line bg-surface p-2 text-dim">
+          <Icon name="settings" size={17} />
           </Link>
           <button
             onClick={() => { localStorage.removeItem("sp_pin"); setPin(""); setLocked(true); setData(null); }}
-            className="rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-dim"
+            className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-dim"
           >
-            Lock
+          <Icon name="lock" size={16} /> Lock
           </button>
         </div>
       </div>
