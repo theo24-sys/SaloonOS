@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: serviceproof
+      POSTGRES_USER: serviceproof
+      POSTGRES_PASSWORD: sp_dev_2026
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U serviceproof"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      SECRET_KEY: dev-docker-secret-change-me
+      DEBUG: "0"
+      ALLOWED_HOSTS: "*"
+      DB_NAME: serviceproof
+      DB_USER: serviceproof
+      DB_PASSWORD: sp_dev_2026
+      DB_HOST: db
+      DB_PORT: "5432"
+      # QR codes point here — change to http://<VM-IP>:3000 to scan from a phone
+      PUBLIC_BASE_URL: http://localhost:3000
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        API_ORIGIN: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

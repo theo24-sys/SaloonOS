@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/* SaloonOS — premium beauty design system
+   cream base · rose primary · plum actions · champagne highlights */
+@theme inline {
+  --color-bg: #fff9f7;          /* soft cream/ivory */
+  --color-surface: #ffffff;
+  --color-surface2: #fdf1ee;    /* blush-tinted panel */
+  --color-line: #f3e2dd;        /* soft rose border */
+  --color-line2: #e9d4ce;
+  --color-ink: #3d3140;         /* deep charcoal-plum */
+  --color-dim: #9b8a92;         /* warm mauve-grey */
+  --color-brand: #c25e7c;       /* dusty rose */
+  --color-brand2: #a94f6b;      /* deeper rose, hover */
+  --color-plum: #5d3a58;        /* important actions */
+  --color-gold: #b98d4f;        /* champagne, sparing */
+  --color-warn: #c07c2f;        /* warm amber */
+  --color-bad: #b5493f;         /* muted red */
+  --color-info: #7a6bae;        /* soft violet for info */
+  --color-good: #4e8d6c;        /* soft green */
+  --font-display: var(--font-playfair), Georgia, serif;
+  --font-sans2: var(--font-jost), system-ui, sans-serif;
+}
+
+html { color-scheme: light; }
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans2), system-ui, sans-serif;
+}
+
+/* Decorative soft blobs on light backgrounds */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.aurora::before, .aurora::after {
+  content: "";
+  position: absolute;
+  width: 40rem;
+  height: 40rem;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.35;
+}
+.aurora::before { background: #f6d9de; top: -14rem; right: -12rem; }
+.aurora::after  { background: #ece2f2; bottom: -16rem; left: -12rem; }
+
+.font-display { font-family: var(--font-display); }
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 28px -18px rgba(93, 58, 88, 0.25);
+}
+
+@keyframes pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.pop { animation: pop 0.25s ease-out; }
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.floaty { animation: floaty 3s ease-in-out infinite; }
+
+input, select, textarea { color: var(--color-ink); }
+input::placeholder { color: var(--color-dim); }
+
+/* Print/PDF: the receipt is the page */
+@media print {
+  .aurora, header, footer, .no-print { display: none !important; }
+  body { background: white; }
+  main { padding: 0 !important; max-width: 30rem !important; margin: 0 auto !important; }
+  .shadow-\[0_20px_50px_-24px_rgba\(93\,58\,88\,0\.35\)\] { box-shadow: none !important; }
+}

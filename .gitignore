@@ -1,0 +1,29 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+frontend/.next/
+frontend/out/
+
+# Django
+staticfiles/
+*.log
+
+# Databases
+*.sqlite3
+*.db
+
+# Environment (keep .env.example)
+.env
+.env.local
+.env.production
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

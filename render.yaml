@@ -1,0 +1,61 @@
+# Render Blueprint — deploys the whole stack in one click:
+#   render blueprint launch   (or: New → Blueprint in the Render dashboard)
+#
+# Creates: managed Postgres + Django API (gunicorn) + Next.js frontend.
+# After the first deploy: run the seed once from the API service shell:
+#   python seed_demo.py
+
+databases:
+  - name: serviceproof-db
+    databaseName: serviceproof
+    user: serviceproof
+    plan: basic-256mb
+
+services:
+  - type: web
+    name: serviceproof-api
+    runtime: python
+    rootDir: .
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate --noinput
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 30
+    healthCheckPath: /api/plans
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: serviceproof-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "0"
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      # Points QR codes at the frontend — replace <name> after the first deploy
+      # if you rename services, or set your own domain here.
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
+  - type: web
+    name: serviceproof-web
+    runtime: node
+    rootDir: frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      # Next.js proxies /api/* to the Django service — one origin, no CORS.
+      - key: API_ORIGIN
+        fromService:
+          name: serviceproof-api
+          type: web
+          property: hostport
+      - key: NODE_VERSION
+        value: "22.14.0"
