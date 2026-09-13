@@ -46,7 +46,7 @@ card-less.
    - **Root Directory:** *(leave blank)*
    - **Build Command:**
      ```
-     pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput
+     pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py seed_plans
      ```
    - **Start Command:**
      ```
@@ -65,7 +65,8 @@ card-less.
    | `CORS_ALLOWED_ORIGINS` | `https://saloonos-web.onrender.com` |
 
 4. Also under **Advanced → Health Check Path**: `/api/plans`.
-5. **Create Web Service.** First build ≈ 5 min; it turns Live when the DB connection works.
+5. **Create Web Service.** First build ≈ 5 min; it turns Live when the DB connection works
+   (migrations + the pricing-tier seed run as part of every build).
 
 **Service 2 — Frontend:**
 1. **New → Web Service** again → same repo.
@@ -89,7 +90,8 @@ card-less.
 > deploy of the frontend so the new URL gets baked into the API proxy.
 
 ### Step 3 — Verify & seed (optional)
-1. Open `https://saloonos-web.onrender.com` — landing page loads.
+1. Open `https://<your-frontend>.onrender.com` — landing page loads, and
+   `/pricing` shows the four tiers (seeded automatically at build).
 2. Demo data (skip for a real deployment): Render → `saloonos-api` → **Shell** →
    `python seed_demo.py`, then log into the dashboard with owner PIN **2026**.
 
