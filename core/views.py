@@ -82,6 +82,14 @@ def gen_code():
 
 # --- Public: plans & signup -------------------------------------------------
 
+# Render and uptime monitors probe the service root. Keep this lightweight and
+# unauthenticated; application traffic continues to use the /api/* routes.
+@api_view(['GET', 'HEAD'])
+@permission_classes([])
+def health(request):
+    return Response({'ok': True, 'service': 'saloonos-api'})
+
+
 @api_view(['GET'])
 @permission_classes([])
 def plans(request):
