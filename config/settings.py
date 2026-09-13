@@ -128,6 +128,7 @@ MPESA_CONSUMER_KEY = env('MPESA_CONSUMER_KEY')
 MPESA_CONSUMER_SECRET = env('MPESA_CONSUMER_SECRET')
 MPESA_PASSKEY = env('MPESA_PASSKEY')
 MPESA_SHORTCODE = env('MPESA_SHORTCODE')
+MPESA_TRANSACTION_TYPE = env('MPESA_TRANSACTION_TYPE', 'CustomerBuyGoodsOnline')
 MPESA_ENVIRONMENT = env('MPESA_ENVIRONMENT', 'sandbox')  # sandbox | production
 MPESA_BASE = ('https://api.safaricom.co.ke' if MPESA_ENVIRONMENT == 'production'
               else 'https://sandbox.safaricom.co.ke')

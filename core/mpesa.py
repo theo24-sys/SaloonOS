@@ -114,7 +114,7 @@ def stk_push(phone, amount, account_reference, description, callback_url):
             'BusinessShortCode': settings.MPESA_SHORTCODE,
             'Password': password,
             'Timestamp': timestamp,
-            'TransactionType': 'CustomerPayBillOnline',
+            'TransactionType': settings.MPESA_TRANSACTION_TYPE,
             'Amount': amount,
             'PartyA': msisdn,
             'PartyB': settings.MPESA_SHORTCODE,
@@ -129,8 +129,9 @@ def stk_push(phone, amount, account_reference, description, callback_url):
         logger.error("mpesa_stk_rejected response_code=%s error=%s",
                      data.get('ResponseCode'), data.get('errorMessage') or data.get('ResponseDescription'))
         raise DarajaError(data.get('errorMessage') or f"STK rejected: {data}")
-    logger.info("mpesa_stk_accepted response_code=%s checkout_suffix=%s merchant_suffix=%s",
-                data.get('ResponseCode'), str(data.get('CheckoutRequestID', ''))[-10:],
+    logger.info("mpesa_stk_accepted response_code=%s transaction_type=%s checkout_suffix=%s merchant_suffix=%s",
+                data.get('ResponseCode'), settings.MPESA_TRANSACTION_TYPE,
+                str(data.get('CheckoutRequestID', ''))[-10:],
                 str(data.get('MerchantRequestID', ''))[-10:])
     return data['CheckoutRequestID'], data['MerchantRequestID']
 

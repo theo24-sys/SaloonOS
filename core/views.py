@@ -411,7 +411,10 @@ def _settle_success(biz, pay):
 
 def _settle_failure(biz, pay, result_code, desc):
     pay.status = {'1032': 'cancelled', '1037': 'timeout'}.get(result_code, 'failed')
-    pay.result_desc = (desc or '')[:255]
+    description = desc or ''
+    if result_code == '2029' and not description:
+        description = 'Safaricom could not complete this Buy Goods payment. Confirm the till, phone, and merchant account settings.'
+    pay.result_desc = description[:255]
     pay.completed_at = timezone.now()
     pay.save(update_fields=['status', 'result_desc', 'completed_at'])
 
@@ -435,9 +438,9 @@ def mpesa_stk(request):
         raise Invalid('Unknown plan')
 
     amount = plan.price_annual if cycle == 'annual' else plan.price_monthly
-    logger.info("mpesa_initiate business=%s plan=%s cycle=%s amount=%s phone_suffix=%s environment=%s simulated=%s callback_configured=%s",
+    logger.info("mpesa_initiate business=%s plan=%s cycle=%s amount=%s phone_suffix=%s environment=%s simulated=%s transaction_type=%s callback_configured=%s",
                 biz.slug, plan.code, cycle, amount, phone[-4:], settings.MPESA_ENVIRONMENT,
-                settings.MPESA_SIMULATE, bool(settings.MPESA_CALLBACK_URL))
+                settings.MPESA_SIMULATE, settings.MPESA_TRANSACTION_TYPE, bool(settings.MPESA_CALLBACK_URL))
     if not settings.MPESA_CALLBACK_URL and not settings.MPESA_SIMULATE:
         raise Invalid('MPESA_CALLBACK_URL is not configured on the server')
 

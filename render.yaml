@@ -50,6 +50,8 @@ services:
         sync: false
       - key: MPESA_SHORTCODE
         sync: false
+      - key: MPESA_TRANSACTION_TYPE
+        value: "CustomerBuyGoodsOnline"
       - key: MPESA_ENVIRONMENT
         value: "production"
       - key: MPESA_SIMULATE
