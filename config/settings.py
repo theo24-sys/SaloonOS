@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -65,7 +67,7 @@ def _db_from_url(url):
 
 if env('DATABASE_URL'):
     DATABASES = {'default': _db_from_url(env('DATABASE_URL'))}
-else:
+elif DEBUG:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -77,6 +79,15 @@ else:
             'CONN_MAX_AGE': 60,
         }
     }
+else:
+    # In production, silently dialing localhost wastes a whole deploy cycle —
+    # crash at startup with the actual fix in the message.
+    raise ImproperlyConfigured(
+        'DATABASE_URL is required when DEBUG=0. Set it on the service '
+        '(Render: Environment → Add Environment Variable) to your hosted '
+        'Postgres URL, e.g. the Supabase session-pooler connection string '
+        '(port 5432, real password substituted).'
+    )
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Africa/Nairobi'
