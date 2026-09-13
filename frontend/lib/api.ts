@@ -184,6 +184,7 @@ export type PlatformPayment = {
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    ...(typeof window !== "undefined" ? { "X-SP-Public-Origin": window.location.origin } : {}),
     ...(opts.headers as Record<string, string> | undefined),
   };
   const res = await fetch(path, { ...opts, headers, cache: "no-store" });

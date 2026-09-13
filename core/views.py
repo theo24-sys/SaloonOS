@@ -231,7 +231,7 @@ def create_bill(request):
     bill.total = total
     bill.save()
     audit(bill, 'created', f"KSh {total} — served by {staff.name}")
-    return Response(BillSerializer(bill).data, status=http.HTTP_201_CREATED)
+    return Response(BillSerializer(bill, context={'request': request}).data, status=http.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
@@ -264,7 +264,7 @@ def edit_bill(request, code):
             item.save()
     bill.total = bill.items.aggregate(s=Sum('price'))['s'] or 0
     bill.save()
-    return Response(BillSerializer(bill).data)
+    return Response(BillSerializer(bill, context={'request': request}).data)
 
 
 @api_view(['GET'])
@@ -279,7 +279,7 @@ def get_bill(request, code):
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
     if bill.status == 'pending' and not request.headers.get('X-SP-NoScan'):
         audit(bill, 'scanned', 'Customer opened the bill')
-    return Response(BillSerializer(bill).data)
+    return Response(BillSerializer(bill, context={'request': request}).data)
 
 
 @api_view(['POST'])
@@ -305,7 +305,7 @@ def verify_bill(request, code):
         bill.approved_at = timezone.now()
         audit(bill, 'verified', f"Customer {bill.customer_name} verified the bill")
     bill.save()
-    return Response(BillSerializer(bill).data)
+    return Response(BillSerializer(bill, context={'request': request}).data)
 
 
 @api_view(['POST'])
@@ -328,7 +328,7 @@ def pay_bill(request, code):
     bill.paid_at = timezone.now()
     bill.save()
     audit(bill, 'paid', f"KSh {bill.total} recorded — {method}")
-    return Response(BillSerializer(bill).data)
+    return Response(BillSerializer(bill, context={'request': request}).data)
 
 
 @api_view(['POST'])
@@ -344,7 +344,7 @@ def void_bill(request, code):
     bill.status = 'voided'
     bill.save()
     audit(bill, 'voided', str(request.data.get('reason') or 'Voided by owner'))
-    return Response(BillSerializer(bill).data)
+    return Response(BillSerializer(bill, context={'request': request}).data)
 
 
 # --- Subscription gating ------------------------------------------------------
@@ -619,7 +619,7 @@ def redeem_scan_bill(request):
     bill.paid_at = timezone.now()
     bill.save(update_fields=['status', 'payment_method', 'payment_ref', 'paid_at'])
     audit(bill, 'paid', f"KSh {bill.total} paid via scan-to-pay — receipt {receipt}")
-    return Response(BillSerializer(bill).data)
+    return Response(BillSerializer(bill, context={'request': request}).data)
 
 
 # --- Owner analytics -----------------------------------------------------------
@@ -818,7 +818,7 @@ def bill_audit(request, code):
     bill = Bill.objects.filter(code=code, business=biz).first()
     if not bill:
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
-    return Response(BillSerializer(bill).data)
+    return Response(BillSerializer(bill, context={'request': request}).data)
 
 
 # --- Platform Admin (Master Management & Monitoring) -------------------------

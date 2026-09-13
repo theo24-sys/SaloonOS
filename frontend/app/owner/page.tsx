@@ -51,7 +51,8 @@ export default function OwnerDash() {
     if (!name) return;
     try {
       const r = await api.inviteCreate(store.slug, store.pin, name);
-      setInviteUrl(r.url);
+      const invitePath = new URL(r.url).pathname + new URL(r.url).search;
+      setInviteUrl(`${window.location.origin}${invitePath}`);
       setInviteName("");
       load(store.pin);
     } catch (e) {

@@ -29,16 +29,19 @@ def audit(bill, type_, detail=''):
     AuditEvent.objects.create(bill=bill, type=type_, detail=detail)
 
 
-def make_qr_data_url(business_slug, code):
-    url = f"{settings_public_base_url()}/v/{code}?b={business_slug}"
+def make_qr_data_url(business_slug, code, request=None):
+    url = f"{settings_public_base_url(request)}/v/{code}?b={business_slug}"
     img = qrcode.make(url, image_factory=PilImage, box_size=10, border=2)
     buf = io.BytesIO()
     img.save(buf, format='PNG')
     return 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode(), url
 
 
-def settings_public_base_url():
+def settings_public_base_url(request=None):
     from django.conf import settings
+    origin = request.headers.get('X-SP-Public-Origin', '').strip().rstrip('/') if request else ''
+    if origin in {configured.rstrip('/') for configured in getattr(settings, 'CORS_ALLOWED_ORIGINS', [])}:
+        return origin
     return getattr(settings, 'PUBLIC_BASE_URL', 'http://localhost:3000')
 
 
@@ -75,11 +78,13 @@ class BillSerializer(serializers.ModelSerializer):
         return list(obj.events.values('type', 'detail', 'at'))
 
     def get_qr_data_url(self, obj):
-        data_url, _ = make_qr_data_url(obj.business.slug, obj.code)
+        request = self.context.get('request')
+        data_url, _ = make_qr_data_url(obj.business.slug, obj.code, request)
         return data_url
 
     def get_verify_url(self, obj):
-        _, url = make_qr_data_url(obj.business.slug, obj.code)
+        request = self.context.get('request')
+        _, url = make_qr_data_url(obj.business.slug, obj.code, request)
         return url
 
 
