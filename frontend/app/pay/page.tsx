@@ -138,9 +138,9 @@ export default function BillingPage() {
     <main className="payment-page mx-auto max-w-4xl px-5 py-8">
       <div className="payment-heading flex items-center justify-between">
         <div>
-          <div className="eyebrow">Account billing</div>
+          <div className="eyebrow"><span className="eyebrow-dot" /> M-Pesa account billing</div>
           <h1 className="font-display mt-2 text-4xl font-semibold tracking-[-.035em]">Keep your salon <em>in sync.</em></h1>
-          <p className="mt-2 max-w-lg text-sm leading-6 text-dim">Choose a plan, receive a secure M-Pesa prompt, and keep customer verification running without interruption.</p>
+          <p className="mt-2 max-w-lg text-sm leading-6 text-dim">Choose a plan, approve securely in M-Pesa, and keep customer verification running without interruption.</p>
         </div>
         <Link href="/owner" className="rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-dim transition hover:border-brand hover:text-ink">← Dashboard</Link>
       </div>

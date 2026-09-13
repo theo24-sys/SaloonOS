@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { store } from "@/lib/api";
@@ -33,6 +34,10 @@ export default function Home() {
     <main>
       <section className="hero-section">
         <div className="hero-copy">
+          <div className="home-brand-lockup">
+            <Image src="/favicon.png" alt="" width={52} height={52} priority />
+            <span><strong>Saloon</strong><em>OS</em></span>
+          </div>
           <div className="eyebrow"><span className="eyebrow-dot" /> Built for salons that want clean books</div>
           <h1>Know what happened at <em>every</em> chair.</h1>
           <p className="hero-lede">SaloonOS turns each service into a customer-verified bill, so owners can grow with confidence instead of chasing missing payments.</p>
