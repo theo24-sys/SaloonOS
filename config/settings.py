@@ -115,3 +115,21 @@ REST_FRAMEWORK = {
 # Public base URL encoded into QR codes — set to your deployed frontend URL
 # (or LAN address for local phone testing) or customers can't scan.
 PUBLIC_BASE_URL = env('PUBLIC_BASE_URL', 'http://localhost:3000')
+
+# --- M-Pesa (Daraja) — salon owners paying for their subscription -----------
+MPESA_CONSUMER_KEY = env('MPESA_CONSUMER_KEY')
+MPESA_CONSUMER_SECRET = env('MPESA_CONSUMER_SECRET')
+MPESA_PASSKEY = env('MPESA_PASSKEY')
+MPESA_SHORTCODE = env('MPESA_SHORTCODE')
+MPESA_ENVIRONMENT = env('MPESA_ENVIRONMENT', 'sandbox')  # sandbox | production
+MPESA_BASE = ('https://api.safaricom.co.ke' if MPESA_ENVIRONMENT == 'production'
+              else 'https://sandbox.safaricom.co.ke')
+# Daraja needs a reachable callback URL. Render services get RENDER_EXTERNAL_URL
+# automatically; override with MPESA_CALLBACK_URL if proxying differently.
+MPESA_CALLBACK_URL = env('MPESA_CALLBACK_URL') or (
+    env('RENDER_EXTERNAL_URL').rstrip('/') + '/api/mpesa/callback/'
+    if env('RENDER_EXTERNAL_URL') else '')
+# Optional shared secret appended by Daraja callers (?token=...) to gate callbacks.
+MPESA_CALLBACK_TOKEN = env('MPESA_CALLBACK_TOKEN')
+# Lets local dev run the whole STK flow without real Daraja keys.
+MPESA_SIMULATE = env('MPESA_SIMULATE', '1' if DEBUG else '0') in ('1', 'true', 'True')

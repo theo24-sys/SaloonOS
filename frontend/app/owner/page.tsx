@@ -103,6 +103,9 @@ export default function OwnerDash() {
           <p className="text-sm text-dim">{data.business.name}</p>
         </div>
         <div className="flex gap-2">
+          <Link href="/pay" className="rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-dim">
+            💳 Billing
+          </Link>
           <Link href="/settings" className="rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-dim">
             ⚙︎
           </Link>
@@ -114,6 +117,24 @@ export default function OwnerDash() {
           </button>
         </div>
       </div>
+
+      {/* Subscription banner */}
+      {data.subscription.state !== "paid" && (
+        <div className={`mt-4 rounded-2xl border p-4 ${data.subscription.state === "expired" ? "border-bad bg-bad/10" : "border-info bg-info/10"}`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm">
+              {data.subscription.state === "expired" ? (
+                <><span className="font-bold text-bad">Trial ended.</span> <span className="text-dim">Bills can&apos;t be created or verified until the plan is paid.</span></>
+              ) : (
+                <><span className="font-bold">Free trial.</span> <span className="text-dim">{data.subscription.days_left} day{data.subscription.days_left === 1 ? "" : "s"} left.</span></>
+              )}
+            </div>
+            <Link href="/pay" className="shrink-0 rounded-xl bg-plum px-4 py-2 text-sm font-bold text-white">
+              {data.subscription.state === "expired" ? "Pay now" : "View billing"}
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Revenue hero */}
       <div className="mt-5 rounded-3xl border border-line bg-gradient-to-br from-[#fff5f3] via-surface to-[#f6eff5] p-6 text-center shadow-[0_16px_40px_-24px_rgba(93,58,88,0.4)]">

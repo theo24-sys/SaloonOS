@@ -153,6 +153,28 @@ from the secure-context rule).
 
 ---
 
+## M-Pesa plan payments (Daraja STK push)
+
+Owners pay for their plan from **Billing** (`/pay`) via an STK push to their phone.
+Configure on the **API service** environment:
+
+| Key | Value |
+|---|---|
+| `MPESA_CONSUMER_KEY` | from developer.safaricom.co.ke → your app |
+| `MPESA_CONSUMER_SECRET` | same app |
+| `MPESA_PASSKEY` | the passkey for your shortcode (production passkey from the Live dashboard) |
+| `MPESA_SHORTCODE` | your Paybill number |
+| `MPESA_ENVIRONMENT` | `production` (or `sandbox` to test) |
+| `MPESA_CALLBACK_TOKEN` | *(optional but recommended)* long random string; the callback must then be reachable as `/api/mpesa/callback/?token=<that value>` — set the token in the Daraja portal callback URL field |
+
+The callback URL is derived automatically on Render from `RENDER_EXTERNAL_URL`; set
+`MPESA_CALLBACK_URL` explicitly only when proxying differently. Keep `MPESA_SIMULATE`
+unset (or `0`) in production — it is on by default only when `DEBUG=1` locally.
+
+Every owner also gets a **14-day free trial** at signup; after it lapses, bill
+creation/verification returns 402 until a payment succeeds (shown in the owner
+dashboard with a Pay-now banner).
+
 ## Checklist for any deployment
 
 - [ ] `SECRET_KEY` set to a long random value, `DEBUG=0`

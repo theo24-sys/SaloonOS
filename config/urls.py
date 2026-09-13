@@ -18,4 +18,8 @@ urlpatterns = [
     re_path(r'^api/bills/(?P<code>[^/]+)/void/?$', views.void_bill),
     re_path(r'^api/bills/(?P<code>[^/]+)/audit/?$', views.bill_audit),
     re_path(r'^api/dashboard/?$', views.dashboard),
+    re_path(r'^api/mpesa/stk/?$', views.mpesa_stk),
+    re_path(r'^api/mpesa/status/(?P<payment_id>\d+)/?$', views.mpesa_status),
+    re_path(r'^api/mpesa/callback/?$', views.mpesa_callback),
+    re_path(r'^api/mpesa/history/?$', views.mpesa_history),
 ]

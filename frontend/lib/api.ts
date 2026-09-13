@@ -57,8 +57,46 @@ export type Dashboard = {
   unverified: number | null;
   disputed: number | null;
   plan_usage: { verified_bills: number; cap: number; remaining: number };
+  subscription: Subscription;
   audit_feed: AuditEv[];
   bills: (Bill & { staff_name: string; was_edited: boolean })[];
+};
+
+export type Subscription = {
+  state: "trial" | "paid" | "expired";
+  end: string | null;
+  days_left: number;
+};
+
+export type MpesaPaymentRow = {
+  id: number;
+  plan: string;
+  cycle: "monthly" | "annual";
+  amount: number;
+  phone: string;
+  status: "pending" | "success" | "failed" | "cancelled" | "timeout";
+  mpesa_receipt: string;
+  created_at: string;
+  extends_until: string | null;
+};
+
+export type StkInitiated = {
+  payment_id: number;
+  checkout_request_id: string;
+  status: string;
+  amount: number;
+  phone: string;
+  message: string;
+};
+
+export type StkStatus = {
+  payment_id: number;
+  status: MpesaPaymentRow["status"];
+  mpesa_receipt: string;
+  result_desc: string;
+  amount: number;
+  cycle: string;
+  subscription: Subscription;
 };
 
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
@@ -126,6 +164,20 @@ export const api = {
       method: "POST",
       headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
       body: JSON.stringify(body),
+    }),
+  stkInitiate: (slug: string, pin: string, body: { phone: string; cycle: "monthly" | "annual"; plan_code?: string }) =>
+    req<StkInitiated>("/api/mpesa/stk/", {
+      method: "POST",
+      headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
+      body: JSON.stringify(body),
+    }),
+  stkStatus: (slug: string, pin: string, paymentId: number) =>
+    req<StkStatus>(`/api/mpesa/status/${paymentId}/`, {
+      headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
+    }),
+  mpesaHistory: (slug: string, pin: string) =>
+    req<{ payments: MpesaPaymentRow[]; subscription: Subscription }>("/api/mpesa/history/", {
+      headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
     }),
 };
 

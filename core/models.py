@@ -24,6 +24,9 @@ class Business(models.Model):
     plan = models.ForeignKey(Plan, on_delete=models.PROTECT)
     owner_pin = models.CharField(max_length=8)      # dashboard access
     created_at = models.DateTimeField(auto_now_add=True)
+    # --- Subscription state (M-Pesa plan payments) ---
+    trial_ends_at = models.DateTimeField(null=True, blank=True)  # 14-day trial from signup
+    plan_paid_until = models.DateTimeField(null=True, blank=True)  # set by successful STK payment
 
     # --- Branding (owner-editable; trust elements stay platform-controlled) ---
     tagline = models.CharField(max_length=120, blank=True)   # e.g. "Beauty · Braids · Nails"
@@ -31,6 +34,29 @@ class Business(models.Model):
     location = models.CharField(max_length=120, blank=True)
     accent = models.CharField(max_length=10, default='blush')  # blush|rose|luxe|plum|minimal
     thank_you = models.CharField(max_length=150, default='Thank you for choosing us ♡')
+
+    def save(self, *args, **kwargs):
+        # New businesses start a 14-day free trial automatically.
+        if self._state.adding and self.trial_ends_at is None:
+            self.trial_ends_at = timezone.now() + timezone.timedelta(days=14)
+        super().save(*args, **kwargs)
+
+    def subscription_info(self):
+        """Single source of truth for subscription state (API + dashboard)."""
+        now = timezone.now()
+        paid = bool(self.plan_paid_until and self.plan_paid_until > now)
+        trial = bool(self.trial_ends_at and self.trial_ends_at > now)
+        if paid:
+            state, end = 'paid', self.plan_paid_until
+        elif trial:
+            state, end = 'trial', self.trial_ends_at
+        else:
+            state, end = 'expired', None
+        return {'state': state, 'end': end,
+                'days_left': max(0, (end - now).days) if end else 0}
+
+    def subscription_active(self):
+        return self.subscription_info()['state'] != 'expired'
 
     def __str__(self):
         return self.name
@@ -116,6 +142,39 @@ class BillEdit(models.Model):
 
     def __str__(self):
         return f"#{self.bill.code} {self.item_name}: {self.old_price} → {self.new_price}"
+
+
+class MpesaPayment(models.Model):
+    """Append-only ledger of plan-payment STK pushes and their outcomes.
+    Never deleted; failed/expired attempts stay for reconciliation."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+        ('timeout', 'Timeout'),
+    ]
+    CYCLE_CHOICES = [('monthly', 'Monthly'), ('annual', 'Annual')]
+
+    business = models.ForeignKey(Business, on_delete=models.PROTECT, related_name='mpesa_payments')
+    plan = models.ForeignKey(Plan, on_delete=models.PROTECT)
+    cycle = models.CharField(max_length=10, choices=CYCLE_CHOICES, default='monthly')
+    amount = models.IntegerField()                      # KSh actually charged
+    phone = models.CharField(max_length=15)             # 2547XXXXXXXX
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    checkout_request_id = models.CharField(max_length=64, unique=True)
+    merchant_request_id = models.CharField(max_length=64, blank=True)
+    mpesa_receipt = models.CharField(max_length=20, blank=True)  # e.g. SJ84K2ABCD
+    result_desc = models.CharField(max_length=255, blank=True)
+    extends_until = models.DateTimeField(null=True, blank=True)  # subscription end this payment grants
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.business.slug} {self.plan.code} KSh {self.amount} — {self.status}"
 
 
 class AuditEvent(models.Model):

@@ -2,6 +2,7 @@ import random
 import string
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
@@ -10,7 +11,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 
-from .models import Plan, Business, StaffMember, Service, Bill, BillItem, BillEdit, AuditEvent
+from .models import (Plan, Business, StaffMember, Service, Bill, BillItem,
+                     BillEdit, AuditEvent, MpesaPayment)
+from .mpesa import DarajaError, stk_push, stk_query, normalize_phone
 from .serializers import (PlanSerializer, BusinessSerializer, BillSerializer,
                           ServiceSerializer, StaffSerializer, audit)
 
@@ -177,6 +180,9 @@ def create_bill(request):
     if not staff:
         return Response({'error': 'Unknown staff member'}, status=http.HTTP_400_BAD_REQUEST)
 
+    # Subscription must be active (trial or paid) to create bills
+    require_active_subscription(biz)
+
     # Plan limit: verified bills per month (pending bills are free to create)
     if verified_count_this_month(biz) >= biz.plan.monthly_verified_bills:
         raise PaymentRequired(
@@ -257,6 +263,7 @@ def verify_bill(request, code):
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
     if bill.status != 'pending':
         raise Conflict(f"Bill is already {bill.status}")
+    require_active_subscription(bill.business)
     if verified_count_this_month(bill.business) >= bill.business.plan.monthly_verified_bills:
         raise PaymentRequired(
             f"{bill.business.plan.name} plan allows {bill.business.plan.monthly_verified_bills} "
@@ -311,6 +318,205 @@ def void_bill(request, code):
     return Response(BillSerializer(bill).data)
 
 
+# --- Subscription gating ------------------------------------------------------
+
+def require_active_subscription(biz):
+    """Trial or paid period must be active to create/verify bills."""
+    info = biz.subscription_info()
+    if info['state'] == 'expired':
+        raise PaymentRequired(
+            "Your trial has ended. Pay your plan via M-Pesa to keep verifying bills "
+            "(Owner dashboard → Billing).")
+
+
+# --- Plan payments (M-Pesa STK push) -------------------------------------------
+
+def _grant(biz, plan, cycle, until):
+    """Extend a subscription to `until`, stacking past the current end."""
+    biz.plan = plan
+    biz.plan_paid_until = until
+    biz.save(update_fields=['plan', 'plan_paid_until'])
+
+
+def _add_months(dt, months):
+    """Same-day-of-month arithmetic, clamped for short months (Jan 31 + 1mo)."""
+    y, m = dt.year, dt.month + months
+    y += (m - 1) // 12
+    m = (m - 1) % 12 + 1
+    try:
+        return dt.replace(year=y, month=m)
+    except ValueError:
+        return dt.replace(year=y, month=m, day=1) - timedelta(days=1)
+
+
+def _settle_success(biz, pay):
+    """Shared by callback + poll: mark success and extend the subscription,
+    stacking past the current paid-until date."""
+    plan, cycle = pay.plan, pay.cycle
+    now = timezone.now()
+    base = max(now, biz.plan_paid_until or now)
+    months = 12 if cycle == 'annual' else 1
+    until = _add_months(base, months) - timedelta(days=1)
+
+    pay.status = 'success'
+    pay.extends_until = until
+    pay.completed_at = now
+    # mpesa_receipt is assigned by the caller (callback) before settling
+    pay.save(update_fields=['status', 'extends_until', 'completed_at', 'mpesa_receipt'])
+    _grant(biz, plan, cycle, until)
+    return until
+
+
+def _settle_failure(biz, pay, result_code, desc):
+    pay.status = {'1032': 'cancelled', '1037': 'timeout'}.get(result_code, 'failed')
+    pay.result_desc = (desc or '')[:255]
+    pay.completed_at = timezone.now()
+    pay.save(update_fields=['status', 'result_desc', 'completed_at'])
+
+
+@api_view(['POST'])
+@permission_classes([])
+def mpesa_stk(request):
+    """Owner initiates a plan payment: STK push to their phone."""
+    biz = get_business(request)
+    require_owner_pin(request, biz)
+    try:
+        phone = normalize_phone(request.data.get('phone') or '')
+    except DarajaError as e:
+        raise Invalid(str(e))
+    cycle = request.data.get('cycle') or 'monthly'
+    plan_code = request.data.get('plan_code') or biz.plan.code
+    if cycle not in ('monthly', 'annual'):
+        raise Invalid('cycle must be monthly or annual')
+    plan = Plan.objects.filter(code=plan_code).first()
+    if not plan:
+        raise Invalid('Unknown plan')
+
+    amount = plan.price_annual if cycle == 'annual' else plan.price_monthly
+    if not settings.MPESA_CALLBACK_URL and not settings.MPESA_SIMULATE:
+        raise Invalid('MPESA_CALLBACK_URL is not configured on the server')
+
+    pay = MpesaPayment.objects.create(
+        business=biz, plan=plan, cycle=cycle, amount=amount, phone=phone)
+    try:
+        checkout_id, merchant_id = stk_push(
+            phone, amount, biz.slug,
+            f'SaloonOS {plan.name} {cycle}',
+            settings.MPESA_CALLBACK_URL)
+    except DarajaError as e:
+        pay.status = 'failed'
+        pay.result_desc = str(e)[:255]
+        pay.save(update_fields=['status', 'result_desc'])
+        return Response({'error': str(e)}, status=http.HTTP_502_BAD_GATEWAY)
+
+    pay.checkout_request_id = checkout_id
+    pay.merchant_request_id = merchant_id or ''
+    pay.save(update_fields=['checkout_request_id', 'merchant_request_id'])
+    return Response({
+        'payment_id': pay.id,
+        'checkout_request_id': checkout_id,
+        'status': pay.status,
+        'amount': amount,
+        'phone': phone,
+        'message': f'STK push sent to {phone}. Enter your M-Pesa PIN to approve.'
+                   if not settings.MPESA_SIMULATE else
+                   f'[SIMULATED] STK push for KSh {amount} to {phone}.',
+    }, status=http.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([])
+def mpesa_status(request, payment_id):
+    """Poll a payment. Settles via Daraja STK query; callback remains authoritative."""
+    biz = get_business(request)
+    require_owner_pin(request, biz)
+    pay = biz.mpesa_payments.filter(id=payment_id).first()
+    if not pay:
+        return Response({'error': 'Payment not found'}, status=http.HTTP_404_NOT_FOUND)
+
+    if pay.status == 'pending' and not settings.MPESA_SIMULATE:
+        try:
+            rc = stk_query(pay.checkout_request_id)
+        except DarajaError:
+            rc = None
+        if rc == '0':
+            _settle_success(biz, pay)
+        elif rc not in (None, 'PENDING'):
+            _settle_failure(biz, pay, rc, 'Failed (query)')
+
+    pay.refresh_from_db()
+    return Response({
+        'payment_id': pay.id, 'status': pay.status,
+        'mpesa_receipt': pay.mpesa_receipt, 'result_desc': pay.result_desc,
+        'amount': pay.amount, 'cycle': pay.cycle,
+        'subscription': biz.subscription_info(),
+    })
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([])
+def mpesa_callback(request):
+    """Daraja calls this when the customer enters their PIN (or it fails).
+    3rd-party result payloads carry Base64-encoded encrypted credentials in the
+    query string; since we only ever initiate for our own shortcode, matching by
+    CheckoutRequestID is sufficient and avoids the decryption dependency."""
+    from urllib.parse import parse_qs
+    qs = parse_qs(request.META.get('QUERY_STRING', ''))
+    token = (qs.get('token') or [''])[0]
+
+    body = request.data if isinstance(request.data, dict) else {}
+    stk = body.get('Body', {}).get('stkCallback', {}) or {}
+    checkout_id = stk.get('CheckoutRequestID', '')
+    result_code = str(stk.get('ResultCode', ''))
+    result_desc = str(stk.get('ResultDesc', ''))
+    items = {i.get('Name'): i.get('Value') for i in stk.get('CallbackMetadata', {}).get('Item', [])}
+    receipt = str(items.get('MpesaReceiptNumber', ''))
+    amount = int(items.get('Amount', 0) or 0)
+
+    if not checkout_id:
+        return Response({'ResultCode': 0, 'ResultDesc': 'Ignored: no CheckoutRequestID'})
+
+    pay = MpesaPayment.objects.filter(checkout_request_id=checkout_id).select_related('business').first()
+    if not pay:
+        return Response({'ResultCode': 0, 'ResultDesc': 'Unknown checkout — ignored'})
+
+    # Optional shared-secret gate (set MPESA_CALLBACK_TOKEN to enable).
+    expected = getattr(settings, 'MPESA_CALLBACK_TOKEN', '')
+    if expected and token != expected:
+        return Response({'ResultCode': 0, 'ResultDesc': 'Rejected: bad token'})
+
+    if pay.status == 'pending':
+        if result_code == '0':
+            if amount and pay.amount and amount != pay.amount:
+                pay.result_desc = f'Amount mismatch: expected {pay.amount}, got {amount}'[:255]
+                pay.status = 'failed'
+                pay.completed_at = timezone.now()
+                pay.save(update_fields=['result_desc', 'status', 'completed_at'])
+            else:
+                pay.mpesa_receipt = receipt
+                _settle_success(pay.business, pay)
+        else:
+            _settle_failure(pay.business, pay, result_code, result_desc)
+
+    return Response({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+
+
+@api_view(['GET'])
+@permission_classes([])
+def mpesa_history(request):
+    biz = get_business(request)
+    require_owner_pin(request, biz)
+    rows = biz.mpesa_payments.all()[:20]
+    return Response({
+        'payments': [{
+            'id': p.id, 'plan': p.plan.name, 'cycle': p.cycle, 'amount': p.amount,
+            'phone': p.phone, 'status': p.status, 'mpesa_receipt': p.mpesa_receipt,
+            'created_at': p.created_at, 'extends_until': p.extends_until,
+        } for p in rows],
+        'subscription': biz.subscription_info(),
+    })
+
+
 # --- Owner dashboard -----------------------------------------------------------
 
 @api_view(['GET'])
@@ -361,6 +567,7 @@ def dashboard(request):
         'yesterday_collected': y_today,
         'plan_usage': {'verified_bills': usage, 'cap': month_cap,
                        'remaining': max(0, month_cap - usage)},
+        'subscription': biz.subscription_info(),
         'audit_feed': audit_feed,
         'bills': bills,
     })
