@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { api, Bill, BillItem, Catalog, money, store } from "@/lib/api";
 import { Badge } from "@/app/receipt";
 import { MpesaScanTile } from "@/app/mpesa";
@@ -134,9 +135,36 @@ export default function StaffApp() {
   }
 
   if (err && !cat) {
+    const isUnknownBiz = err.toLowerCase().includes("unknown business") || err.toLowerCase().includes("missing");
     return (
       <main className="mx-auto max-w-md px-5 py-10">
-        <div className="rounded-2xl border border-bad/40 bg-bad/10 p-5 text-bad">{err}</div>
+        <div className="rounded-2xl border border-line bg-surface p-6 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-2xl text-plum">
+            ✦
+          </div>
+          <h2 className="font-display text-lg font-bold">
+            {isUnknownBiz ? "No Salon Found" : "Connection Error"}
+          </h2>
+          <p className="mt-1 text-sm text-dim">
+            {isUnknownBiz
+              ? "Create your business to start issuing customer-verified bills."
+              : err}
+          </p>
+          <div className="mt-6 flex flex-col gap-2">
+            <Link
+              href="/signup"
+              className="rounded-xl bg-plum px-4 py-2.5 font-bold text-white transition hover:bg-[#4d2f48]"
+            >
+              Start 7-day free trial
+            </Link>
+            <Link
+              href="/pricing"
+              className="rounded-xl border border-line bg-surface2 px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-brand"
+            >
+              View pricing plans
+            </Link>
+          </div>
+        </div>
       </main>
     );
   }

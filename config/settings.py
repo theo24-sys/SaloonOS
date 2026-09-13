@@ -49,9 +49,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 def _db_from_url(url):
-    """Parse a postgres:// DATABASE_URL into Django settings (no extra deps).
+    """Parse a postgres:// or sqlite:// DATABASE_URL into Django settings (no extra deps).
     User/password are URL-unquoted so hosted pooler strings like
     postgresql://postgres.abc:P%40ss@host:5432/postgres work as pasted."""
+    if url.startswith('sqlite'):
+        path = url.replace('sqlite:///', '').replace('sqlite://', '')
+        return {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / path if path and path != ':memory:' else ':memory:',
+        }
     u = urlparse(url)
     return {
         'ENGINE': 'django.db.backends.postgresql',
