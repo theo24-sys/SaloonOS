@@ -125,6 +125,19 @@ export default function BillingPage() {
         <Link href="/owner" className="rounded-xl border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-dim">← Dashboard</Link>
       </div>
 
+      <div className="mt-4 overflow-hidden rounded-2xl border border-[#3AA335]/30 bg-gradient-to-r from-[#eaf7ec] via-[#f2faf3] to-[#e8f6ea] p-4">
+        <div className="flex items-center gap-3">
+          <img src="/mpesa-logo.png" alt="M-Pesa" className="h-10 w-10 rounded-lg border border-[#3AA335]/25 bg-white p-1" />
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-sm font-bold text-[#0b6e35]">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#3AA335] text-[10px] text-white">✓</span>
+              Secured by M-Pesa
+            </p>
+            <p className="text-xs text-[#3f6b4d]">Official Safaricom Daraja payments · you approve every payment on your phone</p>
+          </div>
+        </div>
+      </div>
+
       {sub && (
         <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
           <div className="flex items-center justify-between">
@@ -165,7 +178,7 @@ export default function BillingPage() {
             className="mt-2 w-full rounded-xl border border-line bg-surface2 px-3 py-3 text-lg outline-none focus:border-brand" />
           {lockErr && <p className="mt-2 text-sm text-bad">{lockErr}</p>}
 
-          <button disabled={!phone || !amount} className="mt-4 w-full rounded-xl bg-plum px-4 py-3 font-bold text-white disabled:opacity-50">
+          <button disabled={!phone || !amount} className="mt-4 w-full rounded-xl bg-[#3AA335] px-4 py-3 font-bold text-white shadow-[0_10px_24px_-12px_rgba(58,163,53,0.7)] transition hover:bg-[#33922f] disabled:opacity-50">
             Pay {money(amount)} via M-Pesa
           </button>
           <p className="mt-2 text-center text-xs text-dim">You&apos;ll get an STK push — enter your M-Pesa PIN to approve.</p>
@@ -173,8 +186,8 @@ export default function BillingPage() {
       )}
 
       {phase === "waiting" && (
-        <div className="mt-4 rounded-2xl border border-line bg-surface p-6 text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-brand border-t-transparent" />
+        <div className="mt-4 rounded-2xl border border-[#3AA335]/40 bg-[#f4faf5] p-6 text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#3AA335] border-t-transparent" />
           <h2 className="font-display mt-4 font-bold">Check your phone 📲</h2>
           <p className="mt-1 text-sm text-dim">{statusMsg}</p>
           <p className="mt-1 text-xs text-dim">Waiting for confirmation…</p>
@@ -183,14 +196,14 @@ export default function BillingPage() {
       )}
 
       {phase === "done" && (
-        <div className="mt-4 rounded-2xl border border-good bg-surface p-6 text-center">
+        <div className="mt-4 rounded-2xl border border-[#3AA335] bg-[#f4faf5] p-6 text-center">
           <div className="text-4xl">✓</div>
           <h2 className="font-display mt-2 font-bold">Payment received</h2>
           <p className="mt-1 text-sm text-dim">M-Pesa receipt <span className="font-mono font-semibold text-ink">{receipt}</span></p>
           {sub?.end && <p className="text-sm text-dim">Plan active until {new Date(sub.end).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })} ♡</p>}
           <div className="mt-4 flex justify-center gap-2">
             <button onClick={() => { setPhase("form"); setPhone(""); }} className="rounded-xl border border-line bg-surface2 px-4 py-2 text-sm font-semibold">Pay again</button>
-            <Link href="/owner" className="rounded-xl bg-plum px-4 py-2 text-sm font-bold text-white">Back to dashboard</Link>
+            <Link href="/owner" className="rounded-xl bg-[#3AA335] px-4 py-2 text-sm font-bold text-white">Back to dashboard</Link>
           </div>
         </div>
       )}
@@ -200,9 +213,37 @@ export default function BillingPage() {
           <div className="text-4xl">⚠</div>
           <h2 className="font-display mt-2 font-bold">Payment not completed</h2>
           <p className="mt-1 text-sm text-dim">{statusMsg}</p>
-          <button onClick={() => setPhase("form")} className="mt-4 rounded-xl bg-plum px-4 py-2 text-sm font-bold text-white">Try again</button>
+          <button onClick={() => setPhase("form")} className="mt-4 rounded-xl bg-[#3AA335] px-4 py-2 text-sm font-bold text-white">Try again</button>
         </div>
       )}
+
+      {/* Scan-to-pay — the official Daraja QR sticker, for those who prefer
+          paying from their M-Pesa app without an STK prompt. */}
+      <div className="mt-4 overflow-hidden rounded-2xl border border-[#3AA335]/35 bg-surface">
+        <div className="flex items-center gap-2 bg-[#3AA335] px-4 py-2.5">
+          <span className="text-lg">📱</span>
+          <div>
+            <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Scan to pay</p>
+            <p className="text-[11px] text-[#e2f5e5]">Lipa na Bonga via MY ONEAPP — or dial <span className="font-mono font-bold">*126#</span></p>
+          </div>
+        </div>
+        <div className="flex flex-col items-center gap-4 p-5 sm:flex-row sm:items-center">
+          <div className="rounded-2xl border-2 border-[#3AA335]/40 bg-white p-2 shadow-[0_12px_30px_-18px_rgba(11,110,53,0.55)]">
+            <img src="/mpesa-qr.png" alt="M-Pesa scan-to-pay QR" className="h-40 w-40 sm:h-44 sm:w-44" />
+          </div>
+          <div className="text-center sm:text-left">
+            <p className="font-display text-lg font-bold text-[#0b6e35]">MORGGY TECHNOLOGIES</p>
+            <p className="mt-1 text-sm text-dim">Prefer no prompt? Scan with your M-Pesa app and pay directly.</p>
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#eaf7ec] px-3 py-1 text-sm font-bold text-[#0b6e35]">
+              Paybill <span className="font-mono">4567052</span>
+            </div>
+            <p className="mt-2 text-[11px] text-dim">Scan payments are confirmed to your plan by our team shortly after.</p>
+          </div>
+        </div>
+        <div className="border-t border-[#3AA335]/20 bg-[#f7fbf8] px-4 py-2.5 text-center text-[11px] font-semibold text-[#3f6b4d]">
+          Payments processed over Safaricom M-Pesa · receipt issued for every transaction
+        </div>
+      </div>
 
       {history.length > 0 && (
         <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-surface p-4">
@@ -211,16 +252,16 @@ export default function BillingPage() {
             <table className="mt-2 w-full min-w-[28rem] text-sm sm:min-w-0">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-dim">
-                  <th className="py-2">When</th><th>Plan</th><th className="text-right">Amount</th><th>Receipt</th><th>Status</th>
+                  <th className="whitespace-nowrap py-2">When</th><th className="whitespace-nowrap">Plan</th><th className="whitespace-nowrap text-right">Amount</th><th className="whitespace-nowrap">Receipt</th><th className="whitespace-nowrap">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((p) => (
                   <tr key={p.id} className="border-t border-line">
-                    <td className="py-2 text-xs text-dim">{new Date(p.created_at).toLocaleDateString("en-KE", { day: "numeric", month: "short" })}</td>
-                    <td>{p.plan} <span className="text-xs text-dim">({p.cycle})</span></td>
-                    <td className="text-right font-semibold">{money(p.amount)}</td>
-                    <td className="font-mono text-xs">{p.mpesa_receipt || "—"}</td>
+                    <td className="whitespace-nowrap py-2 text-xs text-dim">{new Date(p.created_at).toLocaleDateString("en-KE", { day: "numeric", month: "short" })}</td>
+                    <td className="whitespace-nowrap">{p.plan} <span className="text-xs text-dim">({p.cycle})</span></td>
+                    <td className="whitespace-nowrap text-right font-semibold">{money(p.amount)}</td>
+                    <td className="whitespace-nowrap pr-3 font-mono text-xs">{p.mpesa_receipt || "—"}</td>
                     <td><span className={`text-xs font-semibold ${p.status === "success" ? "text-good" : p.status === "pending" ? "text-warn" : "text-bad"}`}>{p.status}</span></td>
                   </tr>
                 ))}
