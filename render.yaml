@@ -50,8 +50,10 @@ services:
         sync: false
       - key: MPESA_SHORTCODE
         sync: false
+      - key: MPESA_TILL_NUMBER
+        value: "4567052"
       - key: MPESA_TRANSACTION_TYPE
-        value: "CustomerPayBillOnline"
+        value: "CustomerBuyGoodsOnline"
       - key: MPESA_ENVIRONMENT
         value: "production"
       - key: MPESA_SIMULATE
