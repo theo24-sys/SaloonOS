@@ -22,7 +22,7 @@ PLANS = [
     dict(code='pro', name='Pro', price_monthly=1299, price_annual=12990,
          monthly_verified_bills=2000, max_staff=25, tagline='Large salon/beauty centre',
          is_target=False,
-         features=['Everything in Business', '20+ staff', '2,000 verified bills/mo',
+         features=['Everything in Business', '25+ staff', '2,000 verified bills/mo',
                    'Multiple managers', 'Advanced analytics', 'Branch support', 'Priority support']),
 ]
 

@@ -139,6 +139,25 @@ body {
 .owner-notification-panel {
   animation: owner-panel-in .16s ease-out;
 }
+.owner-notification-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  background: rgba(41, 35, 41, .12);
+  cursor: default;
+}
+.owner-notification-close {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--color-dim);
+  font-size: 20px;
+  line-height: 1;
+}
+.owner-notification-close:hover { background: var(--color-surface2); color: var(--color-ink); }
 .owner-live-toast {
   position: fixed;
   right: 20px;
@@ -174,6 +193,20 @@ body {
 }
 .owner-login-logo {
   object-fit: contain;
+}
+.staff-lock-screen { min-height: calc(100vh - 2rem); }
+.staff-lock-mark {
+  display: flex;
+  width: 66px;
+  height: 66px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  border: 1px solid #edd5d1;
+  border-radius: 22px;
+  background: #fff4f2;
+  font-size: 27px;
+  box-shadow: 0 16px 32px -24px rgba(181, 73, 63, .45);
 }
 .verify-page {
   min-height: calc(100vh - 2rem);
@@ -352,6 +385,24 @@ body {
 @media (max-width: 480px) {
   .verify-dispute-row { flex-direction: column; }
   .verify-dispute-row button { width: 100%; }
+}
+@media (max-width: 640px) {
+  .owner-notification-panel {
+    position: fixed;
+    top: 74px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: min(70vh, 32rem);
+    overflow-y: auto;
+    padding: 14px;
+  }
+  .owner-notification-panel > div:not(:first-child) {
+    min-height: 58px;
+    align-items: flex-start;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
 }
 
 .hero-section, .section-block, .process-section, .cta-section { max-width: 1120px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }

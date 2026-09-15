@@ -114,6 +114,18 @@ CORS_ALLOWED_ORIGINS = [o for o in env(
 ).split(',') if o]
 CORS_ALLOW_HEADERS = ['content-type', 'x-sp-business', 'x-sp-pin', 'x-sp-staff-token', 'x-sp-public-origin']
 
+# Render terminates TLS before forwarding requests to Django. Keep generated
+# URLs and production responses HTTPS-only while preserving local HTTP dev.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer'],
     'DEFAULT_PARSER_CLASSES': ['rest_framework.parsers.JSONParser'],

@@ -232,6 +232,23 @@ export default function StaffApp() {
   }
   if (!cat) return <BrandLoader label="Loading your salon…" />;
 
+  if (cat.subscription.state === "expired") {
+    return (
+      <main className="staff-lock-screen mx-auto max-w-md px-5 py-16 text-center">
+        <div className="staff-lock-mark">🔒</div>
+        <p className="mt-5 text-xs font-bold uppercase tracking-[0.22em] text-bad">Staff access paused</p>
+        <h1 className="font-display mt-2 text-2xl font-bold">This salon needs activation</h1>
+        <p className="mt-3 text-sm leading-6 text-dim">
+          Your free trial or subscription has ended. Please contact management to activate the salon before creating or operating bills.
+        </p>
+        <div className="staff-lock-note mt-5 rounded-2xl border border-warn/30 bg-warn/10 p-4 text-left text-xs leading-5 text-dim">
+          <strong className="text-ink">What to do next</strong><br />Ask the owner or manager to renew the salon plan, then reopen this page.
+        </div>
+        <button onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-plum px-5 py-3 text-sm font-bold text-white">Check access again</button>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-md px-5 py-6">
       {inviteMsg && (

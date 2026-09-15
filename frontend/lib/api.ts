@@ -43,6 +43,7 @@ export type Bill = {
 
 export type Catalog = {
   business: { name: string; slug: string; plan: Plan; logo_data_url?: string };
+  subscription: Subscription;
   services: { id: number; name: string; default_price: number }[];
   staff: { id: number; name: string; role: string }[];
 };

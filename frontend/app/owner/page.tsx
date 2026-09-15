@@ -21,6 +21,7 @@ export default function OwnerDash() {
   const [identifier, setIdentifier] = useState(store.slug);
   const [pin, setPin] = useState(store.pin);
   const [err, setErr] = useState("");
+  const [booting, setBooting] = useState(true);
   const [locked, setLocked] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<Analytics | null>(null);
   const [inviteUrl, setInviteUrl] = useState("");
@@ -52,6 +53,9 @@ export default function OwnerDash() {
       .catch((e) => {
         if (!store.pin) setErr(e.message);
         else { localStorage.removeItem("sp_pin"); setData(null); setLocked(true); }
+      })
+      .finally(() => {
+        setBooting(false);
       });
     api.analytics(targetSlug, p).then(setAnalyticsData).catch(() => {});
   }, []);
@@ -59,6 +63,7 @@ export default function OwnerDash() {
   useEffect(() => {
     const saved = store.pin;
     if (saved) load(saved);
+    else setBooting(false);
   }, [load]);
 
   // Live refresh — always poll with the last PIN that actually worked
@@ -112,6 +117,8 @@ export default function OwnerDash() {
       setErr((e2 as Error).message);
     }
   }
+
+  if (booting) return <BrandLoader label="Checking your saved session…" />;
 
   if (locked) {
     return (
@@ -183,18 +190,21 @@ export default function OwnerDash() {
               {unreadNotifications > 0 && <span className="owner-notification-count">{Math.min(unreadNotifications, 9)}</span>}
             </button>
             {notificationsOpen && (
-              <div className="owner-notification-panel absolute right-0 top-12 z-20 w-[min(21rem,calc(100vw-2.5rem))] rounded-2xl border border-line bg-surface p-3 text-left shadow-xl">
-                <div className="flex items-center justify-between px-2 pb-2">
+              <>
+                <button className="owner-notification-backdrop" aria-label="Close notifications" onClick={() => setNotificationsOpen(false)} />
+                <div className="owner-notification-panel absolute right-0 top-12 z-20 w-[min(21rem,calc(100vw-2.5rem))] rounded-2xl border border-line bg-surface p-3 text-left shadow-xl">
+                  <div className="flex items-center justify-between px-2 pb-2">
                   <strong className="font-display text-base">Notifications</strong>
-                  <span className="text-[10px] uppercase tracking-wider text-dim">Live</span>
-                </div>
-                {notifications.length === 0 ? <p className="px-2 py-4 text-sm text-dim">No activity yet.</p> : notifications.slice(0, 5).map((event) => (
-                  <div key={eventKey(event)} className="flex gap-2 rounded-xl px-2 py-2.5 hover:bg-surface2">
-                    <span className="w-5 shrink-0 text-center text-brand">{EV_ICON[event.type] || "•"}</span>
-                    <div className="min-w-0"><p className="text-xs font-semibold">{notificationTitle(event.type)}</p><p className="truncate text-xs text-dim">{event.detail}</p><p className="mt-0.5 text-[10px] text-dim">{fmtTime(event.at)}</p></div>
+                    <button onClick={() => setNotificationsOpen(false)} className="owner-notification-close" aria-label="Close notifications">×</button>
                   </div>
-                ))}
-              </div>
+                  {notifications.length === 0 ? <p className="px-2 py-4 text-sm text-dim">No activity yet.</p> : notifications.slice(0, 5).map((event) => (
+                    <div key={eventKey(event)} className="flex gap-2 rounded-xl px-2 py-2.5 hover:bg-surface2">
+                      <span className="w-5 shrink-0 text-center text-brand">{EV_ICON[event.type] || "•"}</span>
+                      <div className="min-w-0"><p className="text-xs font-semibold">{notificationTitle(event.type)}</p><p className="break-words text-xs text-dim">{event.detail}</p><p className="mt-0.5 text-[10px] text-dim">{fmtTime(event.at)}</p></div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
           <Link href="/pay" className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-dim">

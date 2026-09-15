@@ -66,6 +66,7 @@ def require_owner_pin(request, business):
 def require_operator(request, business):
     """Allow a verified owner or an active invited staff session."""
     if request.headers.get('X-SP-PIN', '') == business.owner_pin:
+        require_active_subscription(business)
         return None
     token = request.headers.get('X-SP-Staff-Token', '')
     if token:
@@ -75,6 +76,7 @@ def require_operator(request, business):
             revoked_at__isnull=True,
         ).first()
         if session:
+            require_active_subscription(business)
             return session.staff
     raise Unauthorized('Sign in with your staff invite or owner PIN')
 
@@ -164,6 +166,7 @@ def catalog(request):
     biz = get_business(request)
     return Response({
         'business': BusinessSerializer(biz).data,
+        'subscription': biz.subscription_info(),
         'services': ServiceSerializer(biz.services.all(), many=True).data,
         'staff': StaffSerializer(biz.staff.all(), many=True).data,
     })
@@ -203,12 +206,14 @@ def branding(request):
 def add_staff(request):
     biz = get_business(request)
     require_owner_pin(request, biz)
+    require_active_subscription(biz)
     name = (request.data.get('name') or '').strip()
     if not name:
         return Response({'error': 'name required'}, status=http.HTTP_400_BAD_REQUEST)
-    if biz.staff.count() >= biz.plan.max_staff:
+    staff_limit = max(2, biz.plan.max_staff)
+    if biz.staff.count() >= staff_limit:
         return Response(
-            {'error': f"Your {biz.plan.name} plan allows {biz.plan.max_staff} staff. Upgrade to add more."},
+            {'error': f"Your {biz.plan.name} plan allows {staff_limit} staff. Upgrade to add more."},
             status=http.HTTP_402_PAYMENT_REQUIRED)
     member, created = StaffMember.objects.get_or_create(business=biz, name=name)
     return Response(StaffSerializer(member).data, status=http.HTTP_201_CREATED if created else http.HTTP_200_OK)
@@ -218,6 +223,8 @@ def add_staff(request):
 @permission_classes([])
 def add_service(request):
     biz = get_business(request)
+    require_owner_pin(request, biz)
+    require_active_subscription(biz)
     name = (request.data.get('name') or '').strip()
     price = request.data.get('price')
     if not name or price is None:
@@ -792,15 +799,17 @@ def invite_create(request):
     """Owner creates a staff invite; returns the secret link code."""
     biz = get_business(request)
     require_owner_pin(request, biz)
+    require_active_subscription(biz)
     name = (request.data.get('name') or '').strip()
     staff_pin = str(request.data.get('staff_pin') or '').strip()
     if not name:
         raise Invalid('name required')
     if not staff_pin.isdigit() or not 4 <= len(staff_pin) <= 8:
         raise Invalid('staff_pin must be 4 to 8 digits')
-    if biz.staff.count() >= biz.plan.max_staff:
+    staff_limit = max(2, biz.plan.max_staff)
+    if biz.staff.count() >= staff_limit:
         raise PaymentRequired(
-            f"Your {biz.plan.name} plan allows {biz.plan.max_staff} staff. Upgrade to add more.")
+            f"Your {biz.plan.name} plan allows {staff_limit} staff. Upgrade to add more.")
     inv = StaffInvite.objects.create(
         business=biz, name=name, staff_pin=staff_pin,
         code=gen_code() + gen_code(), created_by_pin=biz.owner_pin)
