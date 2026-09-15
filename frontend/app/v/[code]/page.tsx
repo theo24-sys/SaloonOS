@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, Bill } from "@/lib/api";
 import { Receipt } from "@/app/receipt";
 import { MpesaTrustStrip } from "@/app/mpesa";
+import { BrandLoader, VerificationSeal } from "@/app/loading-state";
 
 export default function VerifyBill({ params }: { params: Promise<{ code: string }> }) {
   const [code, setCode] = useState<string | null>(null);
@@ -48,8 +49,8 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
 
   if (notFound)
     return (
-      <main className="mx-auto max-w-md px-5 py-20 text-center">
-        <div className="text-4xl">✦</div>
+      <main className="verify-page verify-empty mx-auto max-w-xl px-5 py-20 text-center">
+        <div className="verify-empty-mark">✦</div>
         <h1 className="font-display mt-3 text-2xl font-bold">Bill not found</h1>
         <p className="mt-2 text-sm text-dim">
           Check the link or ask at the counter for your receipt reference.
@@ -59,23 +60,18 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
 
   if (loadError)
     return (
-      <main className="mx-auto max-w-md px-5 py-20 text-center">
-        <div className="text-4xl">⚠</div>
+      <main className="verify-page verify-empty mx-auto max-w-xl px-5 py-20 text-center">
+        <div className="verify-empty-mark is-error">!</div>
         <h1 className="font-display mt-3 text-2xl font-bold">Receipt temporarily unavailable</h1>
         <p className="mt-2 text-sm text-dim">{loadError}</p>
-        <button onClick={() => code && load(code)} className="mt-5 rounded-xl bg-plum px-5 py-3 text-sm font-bold text-white">
+        <button onClick={() => code && load(code)} className="verify-retry mt-5 rounded-xl bg-plum px-5 py-3 text-sm font-bold text-white">
           Try again
         </button>
       </main>
     );
 
   if (!bill)
-    return (
-      <main className="mx-auto max-w-md px-5 py-24 text-center text-dim">
-        <div className="floaty text-4xl">✦</div>
-        <p className="mt-3 animate-pulse text-sm">Loading your bill…</p>
-      </main>
-    );
+      return <BrandLoader label="Checking your salon bill…" />;
 
   const brand = bill.business;
   const pending = bill.status === "pending";
@@ -84,15 +80,25 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
   );
 
   return (
-    <main className="mx-auto max-w-md px-4 py-8">
+    <main className="verify-page mx-auto max-w-xl px-4 py-6 sm:py-10">
+      <header className="verify-page-header">
+        <div className="verify-page-brand-mark">✓</div>
+        <div>
+          <p className="verify-kicker">Customer verification</p>
+          <p className="verify-page-title">Review your visit</p>
+        </div>
+        <span className="verify-live-status"><i /> Live</span>
+      </header>
       {pending ? (
         <>
-          <Receipt branding={brand} bill={bill} variant="verify" />
+          <div className="verify-receipt-card"><Receipt branding={brand} bill={bill} variant="verify" /></div>
 
           {confirmStep ? (
-            <div className="card mt-5 p-4 text-center">
-              <p className="text-sm font-semibold">Are you sure? This confirms you saw these prices.</p>
-              <div className="mt-3 flex gap-2">
+            <div className="verify-action-panel mt-5 p-5 text-center">
+              <p className="verify-action-kicker">One last check</p>
+              <p className="mt-1 text-base font-semibold">Are these services and prices correct?</p>
+              <p className="mt-1 text-xs text-dim">Your confirmation becomes part of this receipt&apos;s record.</p>
+              <div className="mt-4 flex gap-2">
                 <button
                   onClick={() => setConfirmStep(false)}
                   className="flex-1 rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-dim"
@@ -109,17 +115,15 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
               </div>
             </div>
           ) : (
-            <div className="mt-5 space-y-3">
-              <p className="text-center text-sm font-medium text-ink">
-                Does everything look correct?
-              </p>
+            <div className="verify-action-panel mt-5 space-y-3 p-5">
+              <div className="text-center"><p className="verify-action-kicker">Your approval</p><p className="mt-1 text-base font-semibold">Does everything look correct?</p><p className="mt-1 text-xs text-dim">Confirm only after checking each service above.</p></div>
               <button
                 onClick={() => setConfirmStep(true)}
-                className="w-full rounded-2xl bg-plum px-4 py-4 text-base font-bold tracking-wide text-white shadow-[0_12px_30px_-12px_rgba(93,58,88,0.6)] transition hover:bg-[#4d2f48] active:scale-[0.99]"
+                className="verify-confirm-button w-full rounded-2xl bg-plum px-4 py-4 text-base font-bold tracking-wide text-white shadow-[0_12px_30px_-12px_rgba(93,58,88,0.6)] transition hover:bg-[#4d2f48] active:scale-[0.99]"
               >
-                YES, CONFIRM
+                Confirm this bill <span aria-hidden>✓</span>
               </button>
-              <div className="flex gap-2">
+              <div className="verify-dispute-row flex gap-2">
                 <input
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -141,17 +145,19 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
         </>
       ) : (
         <>
-          <Receipt branding={brand} bill={bill} variant="receipt" />
+          <div className="verify-receipt-card is-complete"><Receipt branding={brand} bill={bill} variant="receipt" /></div>
 
           {(bill.status === "approved" || bill.status === "paid") && (
             <div className="mt-5 space-y-3">
-              <div className="card p-4 text-center">
-                <p className="font-display text-xl">Thank you, {bill.customer_name.split(" ")[0]}! <span className="text-brand">♡</span></p>
+              <div className="verify-success-card card p-4 text-center">
+                <VerificationSeal />
+                <p className="mt-2 font-display text-xl">Thank you, {bill.customer_name.split(" ")[0]}! <span className="text-brand">♡</span></p>
                 <p className="mt-1 text-xs text-dim">
                   {bill.status === "paid"
                     ? "Payment received — see you next time."
                     : "Your bill is verified. Payment is being recorded at the counter."}
                 </p>
+                {brand.thank_you && <p className="mt-3 border-t border-[#d4e7d7] pt-3 text-sm italic text-good">{brand.thank_you}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-2">

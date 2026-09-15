@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { api, Bill, BillItem, Catalog, money, store } from "@/lib/api";
 import { Badge } from "@/app/receipt";
+import { BrandLoader } from "@/app/loading-state";
 
 function BillLines({ items, total }: { items: BillItem[]; total: number }) {
   return (
@@ -229,7 +230,7 @@ export default function StaffApp() {
       </main>
     );
   }
-  if (!cat) return <main className="mx-auto max-w-md px-5 py-10 text-dim">Loading salon…</main>;
+  if (!cat) return <BrandLoader label="Loading your salon…" />;
 
   return (
     <main className="mx-auto max-w-md px-5 py-6">

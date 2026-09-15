@@ -5,6 +5,7 @@ import Image from "next/image";
 import { api, Bill } from "@/lib/api";
 import { Receipt } from "@/app/receipt";
 import { MpesaTrustStrip } from "@/app/mpesa";
+import { BrandLoader } from "@/app/loading-state";
 
 /* Public authenticity page — anyone with the code (or the QR on a printed
    receipt) can confirm a receipt is genuine. No business header needed. */
@@ -27,13 +28,7 @@ export default function PublicReceipt({ params }: { params: Promise<{ code: stri
       </main>
     );
 
-  if (!bill)
-    return (
-      <main className="mx-auto max-w-md px-5 py-24 text-center text-dim">
-        <Image src="/favicon.png" alt="SaloonOS" width={56} height={56} className="floaty mx-auto h-14 w-14 rounded-2xl" />
-        <p className="mt-3 animate-pulse text-sm">Checking receipt…</p>
-      </main>
-    );
+  if (!bill) return <BrandLoader label="Checking your verified receipt…" />;
 
   return (
     <main className="mx-auto max-w-md px-4 py-8">

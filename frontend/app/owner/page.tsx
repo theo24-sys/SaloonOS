@@ -6,6 +6,7 @@ import Image from "next/image";
 import { api, Analytics, AuditEv, Dashboard, money, store } from "@/lib/api";
 import { Badge } from "@/app/receipt";
 import { Icon } from "@/app/icons";
+import { BrandLoader } from "@/app/loading-state";
 // Badge renders status chips for both pages
 
 const EV_ICON: Record<string, string> = {
@@ -151,7 +152,7 @@ export default function OwnerDash() {
     );
   }
 
-  if (!data) return <main className="mx-auto max-w-md px-5 py-10 text-dim">Loading…</main>;
+  if (!data) return <BrandLoader label="Opening your owner dashboard…" />;
 
   const risky = data.bills.filter((b) => b.status === "approved" || b.status === "disputed");
   const usagePct = Math.min(100, Math.round((data.plan_usage.verified_bills / data.plan_usage.cap) * 100));
