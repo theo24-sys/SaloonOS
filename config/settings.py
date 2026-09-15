@@ -123,6 +123,13 @@ REST_FRAMEWORK = {
 # (or LAN address for local phone testing) or customers can't scan.
 PUBLIC_BASE_URL = env('PUBLIC_BASE_URL', 'http://localhost:3000')
 
+# --- Cloudflare R2 image storage ---------------------------------------------
+R2_ENDPOINT_URL = env('R2_ENDPOINT_URL')
+R2_ACCESS_KEY_ID = env('R2_ACCESS_KEY_ID')
+R2_SECRET_ACCESS_KEY = env('R2_SECRET_ACCESS_KEY')
+R2_BUCKET_NAME = env('R2_BUCKET_NAME')
+R2_PUBLIC_URL = env('R2_PUBLIC_URL')
+
 # --- M-Pesa (Daraja) — salon owners paying for their subscription -----------
 MPESA_CONSUMER_KEY = env('MPESA_CONSUMER_KEY')
 MPESA_CONSUMER_SECRET = env('MPESA_CONSUMER_SECRET')

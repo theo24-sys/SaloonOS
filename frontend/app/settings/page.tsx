@@ -6,6 +6,8 @@ import Image from "next/image";
 import { api, Catalog, store } from "@/lib/api";
 import { Receipt, THEMES, Accent } from "@/app/receipt";
 
+const MAX_LOGO_BYTES = 1_000_000;
+
 export default function Settings() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [pin, setPin] = useState(store.pin);
@@ -83,8 +85,12 @@ export default function Settings() {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  if (file.size > 500_000) {
-                    setErr("Logo must be smaller than 500 KB");
+                  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+                    setErr("Logo must be a PNG, JPG, or WebP image");
+                    return;
+                  }
+                  if (file.size > MAX_LOGO_BYTES) {
+                    setErr("Logo must be smaller than 1 MB");
                     return;
                   }
                   const reader = new FileReader();
@@ -95,7 +101,7 @@ export default function Settings() {
             </label>
             {logo && <button type="button" onClick={() => setLogo("")} className="text-xs font-semibold text-bad">Remove</button>}
           </div>
-          <p className="mt-1 text-xs text-dim">PNG, JPG or WebP · max 500 KB · shown on customer receipts</p>
+          <p className="mt-1 text-xs text-dim">PNG, JPG or WebP · max 1 MB · shown on customer receipts</p>
         </div>
         <div className="order-1 sm:order-2 sm:text-right">
           <h1 className="font-display text-2xl font-bold">Appearance</h1>

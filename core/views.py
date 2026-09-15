@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from .models import (Plan, Business, StaffMember, Service, Bill, BillItem,
                      BillEdit, AuditEvent, MpesaPayment, StaffInvite, StaffSession)
 from .mpesa import DarajaError, stk_push, stk_query, normalize_phone
+from .storage import ImageStorageError, MAX_LOGO_DATA_URL_LENGTH, store_logo
 from .serializers import (PlanSerializer, BusinessSerializer, BillSerializer,
                           ServiceSerializer, StaffSerializer, audit)
 
@@ -103,10 +104,11 @@ def plans(request):
 @permission_classes([])
 def signup(request):
     name = (request.data.get('name') or '').strip()
+    phone = (request.data.get('phone') or '').strip()
     plan_code = request.data.get('plan_code') or 'starter'
     owner_pin = str(request.data.get('owner_pin') or '').strip()
-    if not name or len(owner_pin) < 4:
-        return Response({'error': 'name and a 4+ digit owner_pin are required'},
+    if not name or not phone or len(owner_pin) < 4:
+        return Response({'error': 'name, phone and a 4+ digit owner_pin are required'},
                         status=http.HTTP_400_BAD_REQUEST)
     plan = Plan.objects.filter(code=plan_code).first()
     if not plan:
@@ -118,7 +120,8 @@ def signup(request):
         n += 1
         slug = f"{base}{n}"
 
-    biz = Business.objects.create(name=name, slug=slug, plan=plan, owner_pin=owner_pin)
+    biz = Business.objects.create(name=name, slug=slug, plan=plan,
+                                  owner_pin=owner_pin, phone=phone[:20])
     for sname in ['Jane', 'Alice']:
         StaffMember.objects.create(business=biz, name=sname)
     return Response(BusinessSerializer(biz).data, status=http.HTTP_201_CREATED)
@@ -182,9 +185,15 @@ def branding(request):
             setattr(biz, field, val)
     if 'logo_data_url' in request.data:
         logo = str(request.data.get('logo_data_url') or '')
-        if logo and (not logo.startswith('data:image/') or len(logo) > 700_000):
-            raise Invalid('Logo must be an image smaller than 500 KB')
-        biz.logo_data_url = logo
+        if logo and logo == biz.logo_data_url:
+            pass
+        elif logo and (not logo.startswith('data:image/') or len(logo) > MAX_LOGO_DATA_URL_LENGTH):
+            raise Invalid('Logo must be an image smaller than 1 MB')
+        else:
+            try:
+                biz.logo_data_url = store_logo(logo, biz.slug)
+            except ImageStorageError as exc:
+                raise Invalid(str(exc))
     biz.save()
     return Response(BusinessSerializer(biz).data)
 

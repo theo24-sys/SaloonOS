@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { api, Analytics, Dashboard, money, store } from "@/lib/api";
+import { api, Analytics, AuditEv, Dashboard, money, store } from "@/lib/api";
 import { Badge } from "@/app/receipt";
 import { Icon } from "@/app/icons";
 // Badge renders status chips for both pages
@@ -25,11 +25,29 @@ export default function OwnerDash() {
   const [inviteUrl, setInviteUrl] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [invitePin, setInvitePin] = useState("");
+  const [notifications, setNotifications] = useState<AuditEv[]>([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [toast, setToast] = useState<AuditEv | null>(null);
+  const seenEvents = useRef(new Set<string>());
+  const hasLoadedEvents = useRef(false);
 
   const load = useCallback((p: string, targetSlug = store.slug) => {
     setErr("");
     api.dashboard(targetSlug, p)
-      .then((d) => { setData(d); setLocked(false); store.slug = targetSlug; store.pin = p; })
+      .then((d) => {
+        const fresh = d.audit_feed.filter((event) => !seenEvents.current.has(eventKey(event)));
+        d.audit_feed.forEach((event) => seenEvents.current.add(eventKey(event)));
+        if (hasLoadedEvents.current && fresh.length > 0) {
+          setNotifications((current) => [...fresh, ...current].slice(0, 8));
+          setUnreadNotifications((count) => count + fresh.length);
+          setToast(fresh[0]);
+        } else if (!hasLoadedEvents.current) {
+          setNotifications(d.audit_feed.slice(0, 8));
+          hasLoadedEvents.current = true;
+        }
+        setData(d); setLocked(false); store.slug = targetSlug; store.pin = p;
+      })
       .catch((e) => {
         if (!store.pin) setErr(e.message);
         else { localStorage.removeItem("sp_pin"); setData(null); setLocked(true); }
@@ -45,9 +63,15 @@ export default function OwnerDash() {
   // Live refresh — always poll with the last PIN that actually worked
   useEffect(() => {
     if (locked) return;
-    const t = setInterval(() => load(store.pin, store.slug), 8000);
+    const t = setInterval(() => load(store.pin, store.slug), 5000);
     return () => clearInterval(t);
   }, [locked, load]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   async function createInvite() {
     const name = inviteName.trim();
@@ -148,6 +172,30 @@ export default function OwnerDash() {
           <p className="text-sm text-dim">{data.business.name}</p>
         </div>
         <div className="owner-header-actions flex w-full flex-wrap gap-2 sm:w-auto">
+          <div className="relative">
+            <button
+              onClick={() => { setNotificationsOpen((open) => !open); setUnreadNotifications(0); }}
+              aria-label="Notifications"
+              className="relative inline-flex items-center justify-center rounded-xl border border-line bg-surface p-2 text-dim"
+            >
+              <Icon name="notifications" size={17} />
+              {unreadNotifications > 0 && <span className="owner-notification-count">{Math.min(unreadNotifications, 9)}</span>}
+            </button>
+            {notificationsOpen && (
+              <div className="owner-notification-panel absolute right-0 top-12 z-20 w-[min(21rem,calc(100vw-2.5rem))] rounded-2xl border border-line bg-surface p-3 text-left shadow-xl">
+                <div className="flex items-center justify-between px-2 pb-2">
+                  <strong className="font-display text-base">Notifications</strong>
+                  <span className="text-[10px] uppercase tracking-wider text-dim">Live</span>
+                </div>
+                {notifications.length === 0 ? <p className="px-2 py-4 text-sm text-dim">No activity yet.</p> : notifications.slice(0, 5).map((event) => (
+                  <div key={eventKey(event)} className="flex gap-2 rounded-xl px-2 py-2.5 hover:bg-surface2">
+                    <span className="w-5 shrink-0 text-center text-brand">{EV_ICON[event.type] || "•"}</span>
+                    <div className="min-w-0"><p className="text-xs font-semibold">{notificationTitle(event.type)}</p><p className="truncate text-xs text-dim">{event.detail}</p><p className="mt-0.5 text-[10px] text-dim">{fmtTime(event.at)}</p></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <Link href="/pay" className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-dim">
           <Icon name="billing" size={16} /> Billing
           </Link>
@@ -162,6 +210,8 @@ export default function OwnerDash() {
           </button>
         </div>
       </div>
+
+      {toast && <div className="owner-live-toast" role="status"><span className="text-brand">{EV_ICON[toast.type] || "•"}</span><div><strong>{notificationTitle(toast.type)}</strong><p>{toast.detail}</p></div><button onClick={() => setToast(null)} aria-label="Dismiss notification">×</button></div>}
 
       {/* Subscription banner — countdown + 5-day reminder */}
       {data.subscription.state !== "paid" || data.subscription.reminder ? (
@@ -395,6 +445,23 @@ export default function OwnerDash() {
 function greetingTime() {
   const h = new Date().getHours();
   return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
+}
+
+function eventKey(event: AuditEv) {
+  return `${event.at}|${event.type}|${event.code}|${event.detail}`;
+}
+
+function notificationTitle(type: string) {
+  return ({
+    created: "New bill created",
+    edited: "Bill updated",
+    scanned: "Bill scanned",
+    verified: "Bill verified",
+    disputed: "Customer raised a dispute",
+    paid: "Payment recorded",
+    voided: "Bill voided",
+    refunded: "Payment refunded",
+  } as Record<string, string>)[type] || "New activity";
 }
 
 function fmtDate(iso: string | null) {

@@ -211,7 +211,7 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
 
 export const api = {
   plans: () => req<Plan[]>("/api/plans/"),
-  signup: (body: { name: string; plan_code: string; owner_pin: string }) =>
+  signup: (body: { name: string; phone: string; plan_code: string; owner_pin: string }) =>
     req<{ name: string; slug: string }>("/api/signup/", { method: "POST", body: JSON.stringify(body) }),
   ownerLogin: (identifier: string, pin: string) =>
     req<{ slug: string; name: string }>("/api/owner-login/", {

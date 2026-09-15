@@ -8,6 +8,7 @@ function SignupInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [planCode, setPlanCode] = useState("growth");
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
@@ -23,7 +24,7 @@ function SignupInner() {
     setErr("");
     setBusy(true);
     try {
-      const biz = await api.signup({ name, plan_code: planCode, owner_pin: pin });
+      const biz = await api.signup({ name, phone, plan_code: planCode, owner_pin: pin });
       localStorage.setItem("sp_slug", biz.slug);
       localStorage.setItem("sp_pin", pin);
       router.push("/owner");
@@ -62,6 +63,20 @@ function SignupInner() {
             <option value="business">Business — KSh 799/mo</option>
             <option value="pro">Pro — KSh 1,299/mo</option>
           </select>
+        </div>
+        <div>
+          <label className="text-sm font-semibold text-dim">Owner phone number</label>
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="e.g. 0712 345 678"
+            className="mt-2 w-full rounded-xl border border-line bg-bg px-4 py-3 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10"
+            required
+          />
+          <p className="mt-1 text-xs text-dim">Used to sign in and receive account updates.</p>
         </div>
         <div>
           <label className="text-sm font-semibold text-dim">Owner dashboard PIN (4+ digits)</label>

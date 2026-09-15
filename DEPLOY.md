@@ -11,6 +11,10 @@ The two that actually matter in production:
 | `PUBLIC_BASE_URL` | API | Encoded into every QR code. Set it to your public **frontend** URL (`https://…`) or customers can't scan. |
 | `API_ORIGIN` | Frontend (build time) | Where the Next.js proxy sends `/api/*` requests. |
 
+Logo images are stored in Cloudflare R2 when the five `R2_*` variables below are
+configured. Postgres keeps the resulting public image URL with the business record;
+existing inline logos continue to work until they are replaced.
+
 ---
 
 ## Option A — Render (free web services) + Supabase (free Postgres) — no credit card
@@ -63,6 +67,16 @@ card-less.
    | `ALLOWED_HOSTS` | `.onrender.com` |
    | `PUBLIC_BASE_URL` | `https://saloonos-web.onrender.com` |
    | `CORS_ALLOWED_ORIGINS` | `https://saloonos-web.onrender.com` |
+   | `R2_ENDPOINT_URL` | `https://<account-id>.r2.cloudflarestorage.com` |
+   | `R2_ACCESS_KEY_ID` | R2 API token access key |
+   | `R2_SECRET_ACCESS_KEY` | R2 API token secret |
+   | `R2_BUCKET_NAME` | Your R2 bucket name |
+   | `R2_PUBLIC_URL` | Public bucket URL or custom images domain |
+
+Create the R2 bucket in Cloudflare and enable public access through a custom domain
+or an `r2.dev` subdomain. Create an R2 API token scoped to this bucket with Object
+Read and Object Write permissions. Keep the access key and secret only in Render
+environment variables; never commit them to `.env.example` or the repository.
 
 4. Also under **Advanced → Health Check Path**: `/api/plans`.
 5. **Create Web Service.** First build ≈ 5 min; it turns Live when the DB connection works
