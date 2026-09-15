@@ -220,6 +220,23 @@ def add_staff(request):
 
 @api_view(['POST'])
 @permission_classes([])
+def remove_staff(request, staff_id):
+    """Revoke staff access while preserving historical bills."""
+    biz = get_business(request)
+    require_owner_pin(request, biz)
+    member = biz.staff.filter(id=staff_id).first()
+    if not member:
+        raise Invalid('Staff member not found')
+    member.staff_pin = ''
+    member.save(update_fields=['staff_pin'])
+    member.sessions.filter(revoked_at__isnull=True).update(revoked_at=timezone.now())
+    biz.staff_invites.filter(name=member.name, used=False).update(
+        used=True, used_at=timezone.now())
+    return Response({'ok': True, 'name': member.name})
+
+
+@api_view(['POST'])
+@permission_classes([])
 def add_service(request):
     biz = get_business(request)
     require_owner_pin(request, biz)

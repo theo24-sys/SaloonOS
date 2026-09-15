@@ -96,6 +96,16 @@ export default function OwnerDash() {
     }
   }
 
+  async function removeStaff(staffId: number, staffName: string) {
+    if (!window.confirm(`Remove ${staffName}'s access? Their historical bills will stay on record.`)) return;
+    try {
+      await api.staffRemove(store.slug, store.pin, staffId);
+      load(store.pin);
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  }
+
   async function voidBill(code: string) {
     const reason = window.prompt(`Void bill #${code} — reason? (recorded in the audit trail)`);
     if (!reason) return;
@@ -401,6 +411,24 @@ export default function OwnerDash() {
           <button onClick={createInvite} disabled={!inviteName.trim() || invitePin.length < 4}
             className="rounded-xl bg-plum px-4 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_-14px_rgba(76,41,72,.8)] transition hover:-translate-y-0.5 hover:bg-[#382039] disabled:opacity-50">Invite staff</button>
         </div>
+        {catalog && catalog.staff.length > 0 && (
+          <div className="owner-team-list mt-4 divide-y divide-line rounded-xl border border-line bg-surface2">
+            {catalog.staff.map((member) => (
+              <div key={member.id} className="flex items-center justify-between gap-3 px-3 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{member.name}</p>
+                  <p className="text-xs text-dim">{member.role === "manager" ? "Manager" : "Staff member"}</p>
+                </div>
+                <button
+                  onClick={() => removeStaff(member.id, member.name)}
+                  className="shrink-0 rounded-lg border border-bad/30 bg-surface px-2.5 py-1.5 text-xs font-bold text-bad transition hover:bg-bad/10"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         {inviteUrl && (
           <div className="mt-3 rounded-xl border border-brand bg-brand/10 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-dim">Share this link with {`the staff member`} (one-time use):</p>

@@ -10,6 +10,7 @@ urlpatterns = [
     re_path(r'^api/owner-login/?$', views.owner_login),
     re_path(r'^api/catalog/?$', views.catalog),
     re_path(r'^api/staff/add/?$', views.add_staff),
+    re_path(r'^api/staff/(?P<staff_id>\d+)/remove/?$', views.remove_staff),
     re_path(r'^api/branding/?$', views.branding),
     re_path(r'^api/services/add/?$', views.add_service),
     re_path(r'^api/bills/?$', views.create_bill),

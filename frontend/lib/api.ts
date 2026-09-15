@@ -286,6 +286,11 @@ export const api = {
       headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
       body: JSON.stringify({ name, staff_pin: staffPin }),
     }),
+  staffRemove: (slug: string, pin: string, staffId: number) =>
+    req<{ ok: boolean; name: string }>(`/api/staff/${staffId}/remove/`, {
+      method: "POST",
+      headers: { "X-SP-Business": slug, "X-SP-PIN": pin },
+    }),
   inviteAccept: (code: string, staffPin: string) =>
     req<{ business: { name: string; slug: string }; staff: { id: number; name: string }; token: string }>("/api/invites/accept/", {
       method: "POST",
