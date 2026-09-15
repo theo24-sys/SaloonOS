@@ -212,7 +212,7 @@ export default function StaffApp() {
     );
   }
 
-  if (!authReady || (!cat && !err)) return <main className="mx-auto max-w-md px-5 py-10 text-dim">Opening Staff POS…</main>;
+  if (!authReady || (!cat && !err)) return <BrandLoader label="Opening Staff POS…" />;
 
   if (!cat && !store.staffToken && !store.pin) {
     return (

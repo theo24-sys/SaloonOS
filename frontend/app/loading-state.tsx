@@ -7,7 +7,7 @@ export function BrandLoader({ label = "Opening your salon experience…" }: { la
     <main className="brand-loader" role="status" aria-live="polite">
       <div className="brand-loader-mark">
         <Image src="/favicon.png" alt="" width={48} height={48} priority />
-        <span />
+        <span aria-hidden="true" />
       </div>
       <p className="brand-loader-name"><span>Saloon</span><em>OS</em></p>
       <p className="brand-loader-label">{label}</p>

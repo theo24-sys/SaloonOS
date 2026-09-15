@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { store } from "@/lib/api";
+import { BrandLoader } from "@/app/loading-state";
 
 const steps = [
   ["01", "Service is complete", "Your team finishes the appointment."],
@@ -27,7 +28,7 @@ export default function Home() {
   }, [router]);
 
   if (checkingSession) {
-    return <main className="mx-auto max-w-6xl px-5 py-24 text-center text-sm text-dim">Opening SaloonOS…</main>;
+    return <BrandLoader label="Opening SaloonOS…" />;
   }
 
   return (

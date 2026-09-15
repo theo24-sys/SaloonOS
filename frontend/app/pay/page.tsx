@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { api, money, store, Subscription, Plan, MpesaPaymentRow, StkStatus } from "@/lib/api";
 import { MpesaTrustStrip, MpesaScanTile } from "@/app/mpesa";
+import { BrandLoader } from "@/app/loading-state";
 
 type Cycle = "monthly" | "annual";
 type Phase = "form" | "waiting" | "done" | "error";
@@ -17,6 +18,7 @@ const STATE_STYLE: Record<string, string> = {
 
 export default function BillingPage() {
   const [unlocked, setUnlocked] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
   const [pin, setPin] = useState("");
   const [lockErr, setLockErr] = useState("");
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -35,7 +37,7 @@ export default function BillingPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadAll = useCallback((p: string) => {
-    api.mpesaHistory(store.slug, p).then((d) => {
+    return api.mpesaHistory(store.slug, p).then((d) => {
       setSub(d.subscription);
       setHistory(d.payments);
       setUnlocked(true);
@@ -45,7 +47,12 @@ export default function BillingPage() {
   useEffect(() => {
     const saved = store.pin;
     api.plans().then(setPlans).catch(() => {});
-    if (saved) { setPin(saved); loadAll(saved); }
+    if (saved) {
+      setPin(saved);
+      loadAll(saved).finally(() => setSessionReady(true));
+    } else {
+      setSessionReady(true);
+    }
   }, [loadAll]);
 
   // remember current plan once subscription context arrives via dashboard-less call
@@ -118,6 +125,8 @@ export default function BillingPage() {
     e.preventDefault();
     loadAll(pin);
   }
+
+  if (!sessionReady) return <BrandLoader label="Checking your billing session…" />;
 
   if (!unlocked) {
     return (

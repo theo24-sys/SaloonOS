@@ -5,11 +5,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { api, Catalog, store } from "@/lib/api";
 import { Receipt, THEMES, Accent } from "@/app/receipt";
+import { BrandLoader } from "@/app/loading-state";
 
 const MAX_LOGO_BYTES = 5_000_000;
 
 export default function Settings() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
+  const [loading, setLoading] = useState(true);
   const [pin, setPin] = useState(store.pin);
   const [err, setErr] = useState("");
   const [saved, setSaved] = useState(false);
@@ -34,7 +36,7 @@ export default function Settings() {
       setAccent(b.accent || "blush");
       setThankYou(b.thank_you || "");
       setLogo(b.logo_data_url || "");
-    }).catch((e) => setErr(e.message));
+    }).catch((e) => setErr(e.message)).finally(() => setLoading(false));
   }, []);
 
   async function save(e: React.FormEvent) {
@@ -64,6 +66,8 @@ export default function Settings() {
       { id: 3, name: "Hair Wash", price: 300 },
     ],
   };
+
+  if (loading) return <BrandLoader label="Loading salon settings…" />;
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-8">
