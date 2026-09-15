@@ -79,9 +79,18 @@ export function Badge({ status }: { status: string }) {
     draft: "bg-surface2 text-dim",
     refunded: "bg-surface2 text-dim",
   };
+  const labels: Record<string, string> = {
+    pending: "Awaiting verification",
+    approved: "Verified · awaiting payment",
+    paid: "Paid",
+    disputed: "Disputed",
+    voided: "Voided",
+    draft: "Draft",
+    refunded: "Refunded",
+  };
   return (
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${s[status] ?? s.draft}`}>
-      {status}
+      {labels[status] ?? status}
     </span>
   );
 }
@@ -167,8 +176,8 @@ export function Receipt({
                   Confirmed by {bill.customer_name} · {fmtDate(bill.approved_at)}
                 </p>
               )}
-              {bill.status === "paid" && bill.payment_method && (
-                <p className={`mt-1 text-xs font-semibold ${t.accent}`}>Paid · {bill.payment_method}</p>
+              {bill.payment_method && (
+                <p className={`mt-1 text-xs font-semibold ${t.accent}`}>{bill.status === "paid" ? "Paid" : "Payment method"} · {bill.payment_method}</p>
               )}
               {variant !== "verify" && branding.thank_you && (
                 <p className={`mt-4 text-sm italic ${t.dim}`}>{branding.thank_you}</p>

@@ -12,6 +12,7 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
   const [note, setNote] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"M-Pesa" | "Cash" | "Card" | "">("");
   const [err, setErr] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -38,7 +39,7 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
     setConfirming(true);
     setErr("");
     try {
-      const updated = await api.verify(bill.code, dispute, note);
+      const updated = await api.verify(bill.code, dispute, note, paymentMethod || undefined);
       setBill(updated);
     } catch (e) {
       setErr((e as Error).message);
@@ -94,10 +95,23 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
           <div className="verify-receipt-card"><Receipt branding={brand} bill={bill} variant="verify" /></div>
 
           {confirmStep ? (
-            <div className="verify-action-panel mt-5 p-5 text-center">
+              <div className="verify-action-panel no-print mt-5 p-5 text-center">
               <p className="verify-action-kicker">One last check</p>
               <p className="mt-1 text-base font-semibold">Are these services and prices correct?</p>
               <p className="mt-1 text-xs text-dim">Your confirmation becomes part of this receipt&apos;s record.</p>
+              <p className="mt-4 text-left text-xs font-bold uppercase tracking-wide text-dim">How will you pay?</p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {(["M-Pesa", "Cash", "Card"] as const).map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setPaymentMethod(method)}
+                    className={`rounded-xl border px-3 py-2.5 text-sm font-bold transition ${paymentMethod === method ? "border-plum bg-plum text-white" : "border-line bg-surface text-dim hover:border-brand"}`}
+                  >
+                    {method}
+                  </button>
+                ))}
+              </div>
               <div className="mt-4 flex gap-2">
                 <button
                   onClick={() => setConfirmStep(false)}
@@ -107,7 +121,7 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
                 </button>
                 <button
                   onClick={() => verify(false)}
-                  disabled={confirming}
+                  disabled={confirming || !paymentMethod}
                   className="flex-1 rounded-xl bg-plum px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
                 >
                   {confirming ? "Confirming…" : "Yes, confirm"}
@@ -115,7 +129,7 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
               </div>
             </div>
           ) : (
-            <div className="verify-action-panel mt-5 space-y-3 p-5">
+            <div className="verify-action-panel no-print mt-5 space-y-3 p-5">
               <div className="text-center"><p className="verify-action-kicker">Your approval</p><p className="mt-1 text-base font-semibold">Does everything look correct?</p><p className="mt-1 text-xs text-dim">Confirm only after checking each service above.</p></div>
               <button
                 onClick={() => setConfirmStep(true)}
@@ -141,7 +155,7 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
               {err && <p className="text-center text-sm text-bad">{err}</p>}
             </div>
           )}
-          <MpesaTrustStrip note="Paying by M-Pesa? Your payment is approved by you, on your own phone." />
+          <div className="no-print"><MpesaTrustStrip note="Choose how you will pay after confirming the services and prices." /></div>
         </>
       ) : (
         <>
@@ -149,18 +163,18 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
 
           {(bill.status === "approved" || bill.status === "paid") && (
             <div className="mt-5 space-y-3">
-              <div className="verify-success-card card p-4 text-center">
+              <div className="verify-success-card no-print card p-4 text-center">
                 <VerificationSeal />
                 <p className="mt-2 font-display text-xl">Thank you, {bill.customer_name.split(" ")[0]}! <span className="text-brand">♡</span></p>
                 <p className="mt-1 text-xs text-dim">
                   {bill.status === "paid"
                     ? "Payment received — see you next time."
-                    : "Your bill is verified. Payment is being recorded at the counter."}
+                    : `Verified — awaiting ${bill.payment_method || "payment"} at the counter.`}
                 </p>
                 {brand.thank_you && <p className="mt-3 border-t border-[#d4e7d7] pt-3 text-sm italic text-good">{brand.thank_you}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="no-print grid grid-cols-2 gap-2">
                 <a
                   href={`/r/${bill.code}`}
                   className="rounded-2xl border border-line bg-surface px-4 py-3 text-center text-sm font-bold text-plum"
@@ -175,7 +189,7 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="no-print grid grid-cols-2 gap-2">
                 <a
                   href={`https://wa.me/?text=${shareText}`}
                   target="_blank"
@@ -191,15 +205,15 @@ export default function VerifyBill({ params }: { params: Promise<{ code: string 
                   Send SMS
                 </a>
               </div>
-              <p className="text-center text-[11px] text-dim">
+              <p className="no-print text-center text-[11px] text-dim">
                 The receipt link opens a page anyone can verify as genuine.
               </p>
-              <MpesaTrustStrip note={bill.payment_method?.includes("M-Pesa") ? `Paid via M-Pesa${bill.payment_ref ? ` · receipt ${bill.payment_ref}` : ""} — confirmed by Safaricom.` : "M-Pesa payments are confirmed by Safaricom with an SMS receipt."} />
+              <div className="no-print"><MpesaTrustStrip note={bill.payment_method?.includes("M-Pesa") ? `Paid via M-Pesa${bill.payment_ref ? ` · receipt ${bill.payment_ref}` : ""} — confirmed by Safaricom.` : "Payment method selected by the customer; payment is recorded by staff."} /></div>
             </div>
           )}
 
           {bill.status === "disputed" && (
-            <div className="card mt-5 p-4 text-center text-sm">
+            <div className="card no-print mt-5 p-4 text-center text-sm">
               <p className="font-semibold text-bad">⚠ You reported an issue</p>
               {bill.dispute_note && <p className="mt-1 text-dim">“{bill.dispute_note}”</p>}
               <p className="mt-2 text-xs text-dim">The salon will resolve it with you at the counter.</p>

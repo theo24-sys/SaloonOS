@@ -370,12 +370,16 @@ def verify_bill(request, code):
             f"{bill.business.plan.name} plan allows {bill.business.plan.monthly_verified_bills} "
             "verified bills/month. The salon must upgrade to verify this bill.")
     note = str(request.data.get('note') or '').strip()
+    payment_method = str(request.data.get('payment_method') or '').strip()
+    if not request.data.get('dispute') and payment_method not in ('M-Pesa', 'Cash', 'Card'):
+        raise Invalid('Choose M-Pesa, cash, or card before confirming the bill')
     if request.data.get('dispute'):
         bill.status = 'disputed'
         bill.dispute_note = note
         audit(bill, 'disputed', note or 'Customer reported a problem')
     else:
         bill.status = 'approved'
+        bill.payment_method = payment_method
         bill.approved_at = timezone.now()
         audit(bill, 'verified', f"Customer {bill.customer_name} verified the bill")
     bill.save()

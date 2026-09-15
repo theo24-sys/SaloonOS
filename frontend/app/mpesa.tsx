@@ -6,7 +6,7 @@ export const MPESA_GREEN = "#35b956";
 
 export function MpesaTrustStrip({ note }: { note?: string }) {
   return (
-    <div className="mpesa-trust-strip">
+    <div className="mpesa-trust-strip no-print">
       <div className="mpesa-brand-lockup">
         <Image src="/mpesa-wordmark.png" alt="M-Pesa" width={400} height={400} className="mpesa-wordmark" />
         <div><strong>M-PESA</strong><small>by Safaricom</small></div>

@@ -239,10 +239,10 @@ export const api = {
         ...(noScan ? { "X-SP-NoScan": "1" } : {}),
       },
     }),
-  verify: (code: string, dispute: boolean, note: string) =>
+  verify: (code: string, dispute: boolean, note: string, paymentMethod?: "M-Pesa" | "Cash" | "Card") =>
     req<Bill>(`/api/bills/${code}/verify/`, {
       method: "POST",
-      body: JSON.stringify({ dispute, note }),
+      body: JSON.stringify({ dispute, note, payment_method: paymentMethod }),
     }),
   pay: (slug: string, code: string, method: string) =>
     req<Bill>(`/api/bills/${code}/pay/`, {

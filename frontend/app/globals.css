@@ -537,6 +537,9 @@ img { max-width: 100%; }
 /* Print/PDF: the receipt is the page */
 @media print {
   .aurora, header, footer, .no-print { display: none !important; }
+  body { background: white !important; }
+  main { max-width: 32rem !important; padding: 0 !important; }
+  .verify-receipt-card { margin: 0 !important; }
   /* M-Pesa trust strip stays subtle on paper (no heavy green wash) */
   main .overflow-hidden.rounded-2xl[class*="from-[#eaf7ec]"] {
     background: white !important;
