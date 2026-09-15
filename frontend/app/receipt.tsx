@@ -126,7 +126,7 @@ export function Receipt({
 
       {/* Body */}
       <div className={`${t.card} px-6 py-5 ${t.ink}`}>
-        <div className="flex items-baseline justify-between">
+        <div className="receipt-meta flex items-baseline justify-between gap-4">
           <div>
             <div className={`text-[11px] uppercase tracking-widest ${t.dim}`}>Customer</div>
             <div className="font-semibold">{bill.customer_name}</div>
@@ -141,7 +141,7 @@ export function Receipt({
 
         <div className="space-y-2.5">
           {bill.items.map((i) => (
-            <div key={i.id ?? i.name} className="flex items-baseline justify-between text-[15px]">
+            <div key={i.id ?? i.name} className="receipt-item-row flex items-baseline justify-between gap-4 text-[15px]">
               <span>{i.name}</span>
               <span className="font-semibold tabular-nums">{money(i.price)}</span>
             </div>

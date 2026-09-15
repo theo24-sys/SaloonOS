@@ -304,7 +304,7 @@ export default function StaffApp() {
 
             <div className="pt-1 text-sm font-bold">Services</div>
             {items.map((it, i) => (
-              <div key={i} className="flex gap-2">
+              <div key={i} className="staff-pos-item-row flex gap-2">
                 <input
                   list="svcs"
                   value={it.name}
@@ -392,7 +392,7 @@ export default function StaffApp() {
                 ✓ Customer verified this bill
               </div>
               <p className="mt-3 text-center text-xs text-dim">How is the customer paying KSh {bill.total.toLocaleString()}?</p>
-              <div className="mt-2 grid grid-cols-3 gap-2">
+              <div className="staff-pos-payment-grid mt-2 grid grid-cols-3 gap-2">
                 <button onClick={() => pay("M-Pesa")} className="rounded-xl border-2 border-[#3AA335]/50 bg-[#f4faf5] py-2.5 text-sm font-extrabold text-[#0b6e35] transition hover:border-[#3AA335] hover:bg-[#eaf7ec]">
                   M-Pesa
                 </button>

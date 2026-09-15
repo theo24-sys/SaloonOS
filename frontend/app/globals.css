@@ -70,6 +70,28 @@ body {
 .owner-dashboard-header h1 {
   letter-spacing: -.025em;
 }
+.owner-quick-nav {
+  scrollbar-width: none;
+}
+.owner-quick-nav::-webkit-scrollbar {
+  display: none;
+}
+.owner-quick-nav a {
+  flex: 0 0 auto;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: rgba(255,255,255,.62);
+  padding: 7px 11px;
+  color: var(--color-dim);
+  font-size: 11px;
+  font-weight: 700;
+  transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+.owner-quick-nav a:hover {
+  border-color: var(--color-brand);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
 .owner-header-actions a,
 .owner-header-actions button {
   transition: border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
@@ -387,6 +409,78 @@ body {
   .verify-dispute-row button { width: 100%; }
 }
 @media (max-width: 640px) {
+  .owner-dashboard {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .owner-dashboard-header {
+    gap: 14px;
+  }
+  .owner-header-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(4, auto);
+    width: 100%;
+    gap: 8px;
+  }
+  .owner-header-actions > a:first-child {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+  .owner-header-actions > a,
+  .owner-header-actions > button,
+  .owner-header-actions > div > button {
+    min-height: 40px;
+  }
+  .owner-header-actions > a:nth-of-type(2) {
+    min-width: 0;
+    justify-content: center;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+  .owner-header-actions > div {
+    min-width: 40px;
+  }
+  .owner-header-actions > div > button {
+    width: 40px;
+  }
+  .owner-header-actions > a:nth-of-type(3) {
+    justify-content: center;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+  .owner-header-actions > button {
+    justify-content: center;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+  .owner-revenue-card {
+    border-radius: 22px;
+    padding: 20px 14px;
+  }
+  .owner-kpi-grid {
+    gap: 8px;
+  }
+  .owner-kpi-grid > div {
+    min-width: 0;
+    padding: 12px 7px;
+  }
+  .owner-kpi-grid > div > div:nth-child(2) {
+    overflow-wrap: anywhere;
+    font-size: .9rem;
+  }
+  .owner-staff-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .owner-exception-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .owner-exception-row > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
   .owner-notification-panel {
     position: fixed;
     top: 74px;
@@ -437,6 +531,8 @@ h1 em, h2 em { color: var(--color-brand2); font-style: italic; font-weight: 500;
 
 input, select, textarea { color: var(--color-ink); }
 input::placeholder { color: var(--color-dim); }
+main { min-width: 0; }
+img { max-width: 100%; }
 
 /* Print/PDF: the receipt is the page */
 @media print {
@@ -498,6 +594,92 @@ input::placeholder { color: var(--color-dim); }
     .process-step h3 { margin-top: 14px; }
     .cta-section { align-items: flex-start; flex-direction: column; margin: 0 18px 45px; padding-top: 38px; padding-bottom: 38px; }
     .cta-section .button { width: 100%; }
+}
+
+@media (max-width: 640px) {
+  .app-chrome-nav {
+    gap: 10px;
+    font-size: 12px;
+  }
+  .app-chrome-nav a:last-child {
+    padding-right: 12px;
+    padding-left: 12px;
+    white-space: nowrap;
+  }
+  .pricing-page {
+    padding-top: 40px;
+    padding-bottom: 56px;
+  }
+  .pricing-page h1 {
+    font-size: clamp(38px, 11vw, 50px);
+  }
+  .pricing-page .mt-12 {
+    margin-top: 32px;
+  }
+  .pricing-page [class*="p-6"] {
+    padding: 20px;
+  }
+  .settings-header {
+    gap: 16px;
+  }
+  .settings-contact-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-dashboard {
+    padding-top: 24px;
+    padding-bottom: 40px;
+  }
+  .admin-dashboard h1 {
+    font-size: 2rem;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+  .admin-tabs {
+    scrollbar-width: none;
+  }
+  .admin-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .admin-tabs button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .staff-pos-item-row input[type="number"] {
+    width: 76px;
+  }
+  .receipt-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .receipt-meta > div:last-child {
+    text-align: left;
+  }
+  .receipt-item-row {
+    align-items: flex-start;
+  }
+  .receipt-item-row > span:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .mpesa-trust-strip {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+  .mpesa-brand-lockup {
+    border-right: 0;
+    padding-right: 0;
+  }
+  .mpesa-secure-badge {
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin: 0;
+  }
+  .mpesa-sticker-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 @media print {
   body { background: white; }

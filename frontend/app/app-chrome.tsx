@@ -27,7 +27,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
               <span className="font-display italic text-brand">OS</span>
             </span>
           </Link>
-          <nav className="flex items-center gap-4 text-[13px] font-semibold text-dim sm:gap-7 sm:text-sm">
+          <nav className="app-chrome-nav flex items-center gap-4 text-[13px] font-semibold text-dim sm:gap-7 sm:text-sm">
             <Link href="/pricing" className="transition hover:text-ink">Pricing</Link>
             <Link href="/owner" className="transition hover:text-ink">Log in</Link>
             <Link href="/signup" className="rounded-full bg-plum px-4 py-2 font-bold text-white shadow-[0_8px_18px_-12px_rgba(76,41,72,.8)] transition hover:-translate-y-0.5 hover:bg-[#382039]">

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { api, Analytics, AuditEv, Dashboard, money, store } from "@/lib/api";
+import { api, Analytics, AuditEv, Catalog, Dashboard, money, store } from "@/lib/api";
 import { Badge } from "@/app/receipt";
 import { Icon } from "@/app/icons";
 import { BrandLoader } from "@/app/loading-state";
@@ -24,6 +24,7 @@ export default function OwnerDash() {
   const [booting, setBooting] = useState(true);
   const [locked, setLocked] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<Analytics | null>(null);
+  const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [inviteUrl, setInviteUrl] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [invitePin, setInvitePin] = useState("");
@@ -58,6 +59,7 @@ export default function OwnerDash() {
         setBooting(false);
       });
     api.analytics(targetSlug, p).then(setAnalyticsData).catch(() => {});
+    api.catalog(targetSlug).then(setCatalog).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -174,12 +176,19 @@ export default function OwnerDash() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-dim">
             {new Date().toLocaleDateString("en-KE", { weekday: "long", day: "numeric", month: "long" })}
           </p>
+          <p className="mt-2 text-xs font-bold uppercase tracking-[0.2em] text-brand2">Owner overview</p>
           <h1 className="font-display text-2xl font-bold">
             Good {greetingTime()}, {data.business.name.split(" ")[0]} <span className="text-brand">♡</span>
           </h1>
           <p className="text-sm text-dim">{data.business.name}</p>
         </div>
         <div className="owner-header-actions flex w-full flex-wrap gap-2 sm:w-auto">
+          <Link href="/settings" className="order-first inline-flex items-center gap-2 rounded-xl bg-plum px-3 py-2 text-sm font-bold text-white shadow-[0_12px_24px_-16px_rgba(76,41,72,.8)] sm:order-none">
+            <Icon name="settings" size={16} /> Manage salon
+          </Link>
+          <Link href="/app" className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-dim">
+            Staff POS
+          </Link>
           <div className="relative">
             <button
               onClick={() => { setNotificationsOpen((open) => !open); setUnreadNotifications(0); }}
@@ -222,6 +231,14 @@ export default function OwnerDash() {
         </div>
       </div>
 
+      <nav className="owner-quick-nav mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Owner dashboard sections">
+        <a href="#performance">Performance</a>
+        <a href="#team">Team</a>
+        <a href="#services">Services</a>
+        <a href="#review">Bills &amp; review</a>
+        <a href="#activity">Activity</a>
+      </nav>
+
       {toast && <div className="owner-live-toast" role="status"><span className="text-brand">{EV_ICON[toast.type] || "•"}</span><div><strong>{notificationTitle(toast.type)}</strong><p>{toast.detail}</p></div><button onClick={() => setToast(null)} aria-label="Dismiss notification">×</button></div>}
 
       {/* Subscription banner — countdown + 5-day reminder */}
@@ -247,8 +264,10 @@ export default function OwnerDash() {
       ) : null}
 
       {/* Revenue hero */}
-      <div className="owner-revenue-card mt-5 rounded-3xl border border-line p-6 text-center">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-dim">Collected today</div>
+      <section id="performance" className="mt-5 scroll-mt-5" aria-labelledby="performance-heading">
+      <div className="owner-revenue-card rounded-3xl border border-line p-6 text-center">
+        <h2 id="performance-heading" className="text-[11px] font-semibold uppercase tracking-[0.3em] text-dim">Today&apos;s performance</h2>
+        <div className="mt-1 text-xs font-semibold text-dim">Collected today</div>
         <div className="font-display mt-1 text-4xl font-bold tabular-nums sm:text-5xl">{money(data.collected)}</div>
         <div className="mt-2 text-xs font-semibold">
           {growth === null ? (
@@ -268,10 +287,22 @@ export default function OwnerDash() {
 
       {/* Accountability strip */}
       <div className="owner-kpi-grid mt-3 grid grid-cols-3 gap-3">
-        <Stat label="Expected" value={money(data.expected)} />
-        <Stat label="Collected" value={money(data.collected)} tone="good" />
-        <Stat label="Variance" value={`${data.variance > 0 ? "⚠ " : ""}${money(data.variance)}`} tone={data.variance > 0 ? "warn" : "good"} />
+        <Stat label="Expected" hint="Recorded bills" value={money(data.expected)} />
+        <Stat label="Collected" hint="Payments received" value={money(data.collected)} tone="good" />
+        <Stat label="Variance" hint="Expected minus collected" value={`${data.variance > 0 ? "⚠ " : ""}${money(data.variance)}`} tone={data.variance > 0 ? "warn" : "good"} />
       </div>
+      </section>
+
+      <section id="review" className="owner-panel mt-4 scroll-mt-5 rounded-2xl border border-line bg-surface p-4" aria-labelledby="attention-heading">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand2">Review &amp; reconciliation</p>
+            <h2 id="attention-heading" className="mt-1 font-display font-bold">{risky.length > 0 ? "Needs your attention" : "Nothing needs your attention today"}</h2>
+            <p className="mt-1 text-sm text-dim">{risky.length > 0 ? `${risky.length} unpaid, disputed, or edited bill${risky.length === 1 ? "" : "s"} to review.` : "Your salon has no unpaid, disputed, or edited bills."}</p>
+          </div>
+          {risky.length > 0 && <a href="#exceptions" className="rounded-xl border border-warn px-3 py-2 text-sm font-bold text-warn">Review exceptions</a>}
+        </div>
+      </section>
 
       <div className="owner-panel mt-4 rounded-2xl border border-line bg-surface p-4">
         <div className="flex justify-between text-sm">
@@ -309,10 +340,10 @@ export default function OwnerDash() {
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <div className="owner-panel rounded-2xl border border-line bg-surface p-4">
               <h2 className="font-display font-bold">Staff this month</h2>
-              {analyticsData.staff.length === 0 && <p className="mt-2 text-sm text-dim">No bills yet this month.</p>}
+              {analyticsData.staff.length === 0 && <p className="mt-2 text-sm text-dim">Staff activity will appear here once your team creates bills.</p>}
               {analyticsData.staff.map((s, i) => (
                 <div key={s.staff_name} className="mt-3">
-                  <div className="flex items-baseline justify-between text-sm">
+                  <div className="owner-staff-row flex items-baseline justify-between gap-3 text-sm">
                     <span className="font-semibold">{i === 0 && s.collected > 0 ? "👑 " : ""}{s.staff_name}</span>
                     <span className="tabular-nums"><span className="font-bold">{money(s.collected)}</span> <span className="text-xs text-dim">· {s.bills} bills · {s.verify_rate}% verified</span></span>
                   </div>
@@ -325,7 +356,7 @@ export default function OwnerDash() {
 
             <div className="owner-panel rounded-2xl border border-line bg-surface p-4">
               <h2 className="font-display font-bold">Top services</h2>
-              {analyticsData.top_services.length === 0 && <p className="mt-2 text-sm text-dim">No paid services yet this month.</p>}
+              {analyticsData.top_services.length === 0 && <p className="mt-2 text-sm text-dim">Your top services report will appear after staff record customer visits.</p>}
               {analyticsData.top_services.map((s) => (
                 <div key={s.name} className="mt-3">
                   <div className="flex items-baseline justify-between text-sm">
@@ -357,8 +388,12 @@ export default function OwnerDash() {
       )}
 
       {/* Team — invites */}
-      <div className="owner-panel mt-4 rounded-2xl border border-line bg-surface p-4">
-        <h2 className="font-display font-bold">Team</h2>
+      <div id="team" className="owner-panel mt-4 scroll-mt-5 rounded-2xl border border-line bg-surface p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand2">People &amp; access</p><h2 className="mt-1 font-display font-bold">Your team</h2></div>
+          <span className="rounded-full bg-surface2 px-2.5 py-1 text-xs font-semibold text-dim">Owner managed</span>
+        </div>
+        <p className="mt-1 text-sm text-dim">Staff create bills from Staff POS. You manage access and review the results here.</p>
         <p className="text-xs text-dim">Assign each staff member a PIN. They will need the invite link and PIN to sign in.</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Staff name (e.g. Faith)"
@@ -380,11 +415,19 @@ export default function OwnerDash() {
         )}
       </div>
 
+      <div id="services" className="owner-panel mt-4 scroll-mt-5 rounded-2xl border border-line bg-surface p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand2">Owner managed</p><h2 className="mt-1 font-display font-bold">Service catalog</h2></div>
+          <Link href="/settings" className="rounded-xl border border-line px-3 py-2 text-sm font-bold text-dim hover:border-brand hover:text-ink">Manage services</Link>
+        </div>
+        <p className="mt-2 text-sm text-dim"><strong className="text-ink">{catalog ? `${catalog.services.length} active service${catalog.services.length === 1 ? "" : "s"}` : "Service catalog"}</strong> available to staff when recording customer visits.</p>
+      </div>
+
       {risky.length > 0 && (
-        <div className="mt-4 rounded-2xl border border-warn bg-surface p-4">
+        <div id="exceptions" className="mt-4 scroll-mt-5 rounded-2xl border border-warn bg-surface p-4">
           <h2 className="font-display font-bold">⚠ Exceptions — needs attention ({risky.length})</h2>
           {risky.map((b) => (
-            <div key={b.code} className="flex items-center justify-between border-b border-line py-3 last:border-0">
+            <div key={b.code} className="owner-exception-row flex items-center justify-between gap-3 border-b border-line py-3 last:border-0">
               <div>
                 <div className="text-sm font-semibold">
                   #{b.code} · {b.customer_name} · {b.staff_name}
@@ -403,7 +446,7 @@ export default function OwnerDash() {
         </div>
       )}
 
-      <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
+      <div id="activity" className="mt-4 scroll-mt-5 rounded-2xl border border-line bg-surface p-4">
         <h2 className="font-display font-bold">Today&apos;s activity</h2>
         <div className="owner-activity-list mt-2 max-h-72 space-y-1.5 overflow-y-auto pr-1">
           {data.audit_feed.map((e, i) => (
@@ -517,12 +560,13 @@ function FunnelStep({ label, value, max, tone }: { label: string; value: number;
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" | "bad" }) {
+function Stat({ label, hint, value, tone }: { label: string; hint: string; value: string; tone?: "good" | "warn" | "bad" }) {
   const color = tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : tone === "bad" ? "text-bad" : "";
   return (
     <div className="rounded-2xl border border-line bg-surface p-4 text-center">
       <div className="text-[10px] font-semibold uppercase tracking-wider text-dim">{label}</div>
       <div className={`mt-1 text-lg font-bold tabular-nums ${color}`}>{value}</div>
+      <div className="mt-1 text-[10px] text-dim">{hint}</div>
     </div>
   );
 }

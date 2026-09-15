@@ -14,7 +14,7 @@ export default function Pricing() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-6xl px-[18px] py-14 sm:px-6 sm:py-20">
+    <main className="pricing-page mx-auto max-w-6xl px-[18px] py-14 sm:px-6 sm:py-20">
       <div className="mx-auto max-w-3xl text-center">
       <div className="eyebrow">Simple, honest pricing</div>
       <h1 className="mt-4 font-display text-5xl font-semibold leading-[.98] tracking-[-.045em] sm:text-6xl">Pick the pace that fits your <em>chair count.</em></h1>

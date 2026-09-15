@@ -168,7 +168,7 @@ export default function PlatformAdminDashboard() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
+    <main className="admin-dashboard mx-auto max-w-6xl px-4 py-8">
       {/* Header */}
       <div className="flex flex-col gap-4 border-b border-line pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -245,7 +245,7 @@ export default function PlatformAdminDashboard() {
       )}
 
       {/* Navigation Tabs */}
-      <div className="mt-8 flex gap-2 border-b border-line pb-2">
+      <div className="admin-tabs mt-8 flex gap-2 overflow-x-auto border-b border-line pb-2">
         <button
           onClick={() => setTab("overview")}
           className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
