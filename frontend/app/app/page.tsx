@@ -192,8 +192,6 @@ export default function StaffApp() {
       </main>
     );
   }
-  if (!authReady || (!cat && !err)) return <main className="mx-auto max-w-md px-5 py-10 text-dim">Opening Staff POS…</main>;
-
   if (inviteCode && !store.staffToken) {
     return (
       <main className="mx-auto max-w-md px-5 py-16">
@@ -213,6 +211,8 @@ export default function StaffApp() {
       </main>
     );
   }
+
+  if (!authReady || (!cat && !err)) return <main className="mx-auto max-w-md px-5 py-10 text-dim">Opening Staff POS…</main>;
 
   if (!cat && !store.staffToken && !store.pin) {
     return (
