@@ -124,8 +124,6 @@ def signup(request):
 
     biz = Business.objects.create(name=name, slug=slug, plan=plan,
                                   owner_pin=owner_pin, phone=phone[:20])
-    for sname in ['Jane', 'Alice']:
-        StaffMember.objects.create(business=biz, name=sname)
     return Response(BusinessSerializer(biz).data, status=http.HTTP_201_CREATED)
 
 
@@ -168,7 +166,7 @@ def catalog(request):
         'business': BusinessSerializer(biz).data,
         'subscription': biz.subscription_info(),
         'services': ServiceSerializer(biz.services.all(), many=True).data,
-        'staff': StaffSerializer(biz.staff.all(), many=True).data,
+        'staff': StaffSerializer(biz.staff.exclude(staff_pin=''), many=True).data,
     })
 
 
@@ -211,7 +209,8 @@ def add_staff(request):
     if not name:
         return Response({'error': 'name required'}, status=http.HTTP_400_BAD_REQUEST)
     staff_limit = max(2, biz.plan.max_staff)
-    if biz.staff.count() >= staff_limit:
+    managed_staff_count = biz.staff.exclude(staff_pin='').count()
+    if managed_staff_count >= staff_limit:
         return Response(
             {'error': f"Your {biz.plan.name} plan allows {staff_limit} staff. Upgrade to add more."},
             status=http.HTTP_402_PAYMENT_REQUIRED)
@@ -807,7 +806,9 @@ def invite_create(request):
     if not staff_pin.isdigit() or not 4 <= len(staff_pin) <= 8:
         raise Invalid('staff_pin must be 4 to 8 digits')
     staff_limit = max(2, biz.plan.max_staff)
-    if biz.staff.count() >= staff_limit:
+    managed_staff_count = biz.staff.exclude(staff_pin='').count()
+    pending_invite_count = biz.staff_invites.filter(used=False).count()
+    if managed_staff_count + pending_invite_count >= staff_limit:
         raise PaymentRequired(
             f"Your {biz.plan.name} plan allows {staff_limit} staff. Upgrade to add more.")
     inv = StaffInvite.objects.create(
@@ -833,6 +834,11 @@ def invite_accept(request):
                         status=http.HTTP_400_BAD_REQUEST)
     if staff_pin != inv.staff_pin:
         return Response({'error': 'Incorrect staff PIN.'}, status=http.HTTP_401_UNAUTHORIZED)
+    staff_limit = max(2, inv.business.plan.max_staff)
+    managed_staff_count = inv.business.staff.exclude(staff_pin='').count()
+    if not inv.business.staff.filter(name=inv.name).exclude(staff_pin='').exists() and managed_staff_count >= staff_limit:
+        raise PaymentRequired(
+            f"Your {inv.business.plan.name} plan allows {staff_limit} staff. Upgrade to add more.")
     member, created = StaffMember.objects.get_or_create(
         business=inv.business, name=inv.name,
         defaults={'staff_pin': inv.staff_pin},

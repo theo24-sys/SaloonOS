@@ -186,9 +186,6 @@ export default function OwnerDash() {
           <Link href="/settings" className="order-first inline-flex items-center gap-2 rounded-xl bg-plum px-3 py-2 text-sm font-bold text-white shadow-[0_12px_24px_-16px_rgba(76,41,72,.8)] sm:order-none">
             <Icon name="settings" size={16} /> Manage salon
           </Link>
-          <Link href="/app" className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-dim">
-            Staff POS
-          </Link>
           <div className="relative">
             <button
               onClick={() => { setNotificationsOpen((open) => !open); setUnreadNotifications(0); }}
@@ -391,17 +388,18 @@ export default function OwnerDash() {
       <div id="team" className="owner-panel mt-4 scroll-mt-5 rounded-2xl border border-line bg-surface p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand2">People &amp; access</p><h2 className="mt-1 font-display font-bold">Your team</h2></div>
-          <span className="rounded-full bg-surface2 px-2.5 py-1 text-xs font-semibold text-dim">Owner managed</span>
+          <span className="rounded-full bg-surface2 px-2.5 py-1 text-xs font-semibold text-dim">
+            {catalog ? `${catalog.staff.length} staff member${catalog.staff.length === 1 ? "" : "s"}` : "Owner managed"}
+          </span>
         </div>
-        <p className="mt-1 text-sm text-dim">Staff create bills from Staff POS. You manage access and review the results here.</p>
-        <p className="text-xs text-dim">Assign each staff member a PIN. They will need the invite link and PIN to sign in.</p>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <p className="mt-1 text-sm text-dim">Invite your team and assign each person a secure PIN. Their activity will appear here as they work.</p>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <input value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Staff name (e.g. Faith)"
             className="flex-1 rounded-xl border border-line bg-surface2 px-3 py-2.5 outline-none focus:border-brand" />
           <input value={invitePin} onChange={(e) => setInvitePin(e.target.value.replace(/\D/g, "").slice(0, 8))} inputMode="numeric" placeholder="PIN (4–8 digits)"
             className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 outline-none focus:border-brand sm:w-40" />
           <button onClick={createInvite} disabled={!inviteName.trim() || invitePin.length < 4}
-            className="rounded-xl bg-plum px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">Create invite link</button>
+            className="rounded-xl bg-plum px-4 py-2.5 text-sm font-bold text-white shadow-[0_10px_22px_-14px_rgba(76,41,72,.8)] transition hover:-translate-y-0.5 hover:bg-[#382039] disabled:opacity-50">Invite staff</button>
         </div>
         {inviteUrl && (
           <div className="mt-3 rounded-xl border border-brand bg-brand/10 p-3">
