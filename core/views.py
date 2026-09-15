@@ -373,6 +373,8 @@ def require_active_subscription(biz):
 
 # --- Plan payments (M-Pesa STK push) -------------------------------------------
 
+STK_QUERY_FAILURE_GRACE_SECONDS = 30
+
 def _grant(biz, plan, cycle, until):
     """Extend a subscription to `until`, stacking past the current end."""
     biz.plan = plan
@@ -497,7 +499,9 @@ def mpesa_status(request, payment_id):
         if rc == '0':
             _settle_success(biz, pay)
         elif rc not in (None, 'PENDING'):
-            _settle_failure(biz, pay, rc, 'Failed (query)')
+            age = (timezone.now() - pay.created_at).total_seconds()
+            if age >= STK_QUERY_FAILURE_GRACE_SECONDS:
+                _settle_failure(biz, pay, rc, 'Failed (query)')
 
     pay.refresh_from_db()
     return Response({
