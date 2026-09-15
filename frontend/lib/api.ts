@@ -213,6 +213,11 @@ export const api = {
   plans: () => req<Plan[]>("/api/plans/"),
   signup: (body: { name: string; plan_code: string; owner_pin: string }) =>
     req<{ name: string; slug: string }>("/api/signup/", { method: "POST", body: JSON.stringify(body) }),
+  ownerLogin: (identifier: string, pin: string) =>
+    req<{ slug: string; name: string }>("/api/owner-login/", {
+      method: "POST",
+      body: JSON.stringify({ identifier, pin }),
+    }),
   catalog: (slug: string) => req<Catalog>("/api/catalog/", { headers: { "X-SP-Business": slug } }),
   createBill: (slug: string, body: { customer_name: string; customer_phone: string; staff_id: number; items: BillItem[] }) =>
     req<Bill>("/api/bills/", { method: "POST", headers: operatorHeaders(slug), body: JSON.stringify(body) }),

@@ -60,6 +60,80 @@ body {
   box-shadow: 0 8px 28px -18px rgba(93, 58, 88, 0.25);
 }
 
+.owner-dashboard {
+  position: relative;
+}
+.owner-dashboard-header {
+  border-bottom: 1px solid rgba(216, 201, 194, .72);
+  padding-bottom: 22px;
+}
+.owner-dashboard-header h1 {
+  letter-spacing: -.025em;
+}
+.owner-header-actions a,
+.owner-header-actions button {
+  transition: border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
+}
+.owner-header-actions a:hover,
+.owner-header-actions button:hover {
+  border-color: var(--color-brand);
+  color: var(--color-ink);
+  transform: translateY(-1px);
+}
+.owner-revenue-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, #fffaf8 0%, #fff 52%, #f5eef5 100%);
+  box-shadow: 0 22px 48px -30px rgba(76, 41, 72, .48);
+}
+.owner-revenue-card::after {
+  position: absolute;
+  right: -70px;
+  bottom: -110px;
+  width: 280px;
+  height: 180px;
+  border: 1px solid rgba(195, 107, 131, .16);
+  border-radius: 50%;
+  content: "";
+  transform: rotate(-12deg);
+}
+.owner-revenue-card > * {
+  position: relative;
+  z-index: 1;
+}
+.owner-kpi-grid > div,
+.owner-panel {
+  box-shadow: 0 10px 28px -24px rgba(76, 41, 72, .48);
+}
+.owner-panel {
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.owner-panel:hover {
+  border-color: var(--color-line2);
+  box-shadow: 0 16px 32px -25px rgba(76, 41, 72, .5);
+}
+.owner-activity-list > div {
+  border-radius: 10px;
+  padding: 6px 8px;
+  transition: background .18s ease;
+}
+.owner-activity-list > div:hover {
+  background: var(--color-surface2);
+}
+.owner-login-shell {
+  min-height: calc(100vh - 2rem);
+  display: flex;
+  align-items: center;
+}
+.owner-login-card {
+  width: 100%;
+  background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(250,244,244,.9));
+  box-shadow: 0 24px 58px -32px rgba(76, 41, 72, .48);
+}
+.owner-login-logo {
+  object-fit: contain;
+}
+
 .hero-section, .section-block, .process-section, .cta-section { max-width: 1120px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
 .hero-section { min-height: 650px; display: grid; grid-template-columns: minmax(0, .86fr) minmax(500px, 1.14fr); align-items: center; gap: 64px; padding-top: 78px; padding-bottom: 82px; }
 .hero-copy { position: relative; z-index: 1; }

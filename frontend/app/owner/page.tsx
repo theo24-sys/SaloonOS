@@ -17,6 +17,7 @@ const fmtTime = (iso: string) =>
 
 export default function OwnerDash() {
   const [data, setData] = useState<Dashboard | null>(null);
+  const [identifier, setIdentifier] = useState(store.slug);
   const [pin, setPin] = useState(store.pin);
   const [err, setErr] = useState("");
   const [locked, setLocked] = useState(true);
@@ -25,15 +26,15 @@ export default function OwnerDash() {
   const [inviteName, setInviteName] = useState("");
   const [invitePin, setInvitePin] = useState("");
 
-  const load = useCallback((p: string) => {
+  const load = useCallback((p: string, targetSlug = store.slug) => {
     setErr("");
-    api.dashboard(store.slug, p)
-      .then((d) => { setData(d); setLocked(false); store.pin = p; })
+    api.dashboard(targetSlug, p)
+      .then((d) => { setData(d); setLocked(false); store.slug = targetSlug; store.pin = p; })
       .catch((e) => {
         if (!store.pin) setErr(e.message);
         else { localStorage.removeItem("sp_pin"); setData(null); setLocked(true); }
       });
-    api.analytics(store.slug, p).then(setAnalyticsData).catch(() => {});
+    api.analytics(targetSlug, p).then(setAnalyticsData).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export default function OwnerDash() {
   // Live refresh — always poll with the last PIN that actually worked
   useEffect(() => {
     if (locked) return;
-    const t = setInterval(() => load(store.pin), 8000);
+    const t = setInterval(() => load(store.pin, store.slug), 8000);
     return () => clearInterval(t);
   }, [locked, load]);
 
@@ -74,30 +75,52 @@ export default function OwnerDash() {
     }
   }
 
-  function unlock(e: React.FormEvent) {
+  async function unlock(e: React.FormEvent) {
     e.preventDefault();
-    load(pin);
+    setErr("");
+    try {
+      const session = await api.ownerLogin(identifier.trim(), pin);
+      store.slug = session.slug;
+      store.pin = pin;
+      load(pin, session.slug);
+    } catch (e2) {
+      setErr((e2 as Error).message);
+    }
   }
 
   if (locked) {
     return (
-      <main className="mx-auto max-w-md px-5 py-16">
-        <form onSubmit={unlock} className="card mx-auto max-w-xs p-6 text-center">
-          <Image src="/favicon.png" alt="SaloonOS" width={64} height={64} className="mx-auto h-16 w-16 rounded-2xl" />
-          <h1 className="font-display mt-2 text-xl font-bold">SaloonOS</h1>
-          <p className="text-xs uppercase tracking-[0.25em] text-dim">Owner dashboard</p>
-          <p className="mt-3 text-sm text-dim">Enter your PIN</p>
+      <main className="owner-login-shell mx-auto max-w-md px-5 py-12 sm:py-20">
+        <form onSubmit={unlock} className="owner-login-card card mx-auto max-w-sm p-7 text-center sm:p-8">
+          <Image src="/logo-full.png" alt="SaloonOS" width={220} height={70} priority className="owner-login-logo mx-auto h-auto w-52" />
+          <p className="mt-5 text-xs font-semibold uppercase tracking-[0.25em] text-brand2">Owner dashboard</p>
+          <h1 className="font-display mt-2 text-2xl font-bold">Welcome back</h1>
+          <p className="mt-2 text-sm leading-6 text-dim">Sign in with your business username or registered phone number and PIN.</p>
+          <label className="mt-5 block text-left text-xs font-bold uppercase tracking-wider text-dim" htmlFor="owner-identifier">Username or phone</label>
           <input
+            id="owner-identifier"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            autoComplete="username"
+            placeholder="e.g. glowstudio or 0712 345 678"
+            className="mt-2 w-full rounded-xl border border-line bg-surface2 px-3 py-3 outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
+            required
+          />
+          <label className="mt-4 block text-left text-xs font-bold uppercase tracking-wider text-dim" htmlFor="owner-pin">Owner PIN</label>
+          <input
+            id="owner-pin"
             type="password"
             inputMode="numeric"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
-            placeholder="••••"
-            className="mt-4 w-full rounded-xl border border-line bg-surface2 px-3 py-3 text-center text-xl tracking-[0.5em] outline-none focus:border-brand"
+            autoComplete="current-password"
+            placeholder="Enter PIN"
+            className="mt-2 w-full rounded-xl border border-line bg-surface2 px-3 py-3 text-center text-xl tracking-[0.5em] outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
+            required
           />
           {err && <p className="mt-2 text-sm text-bad">{err}</p>}
-          <button className="mt-3 w-full rounded-xl bg-plum px-4 py-3 font-bold text-white">
-            Unlock
+          <button className="mt-5 w-full rounded-xl bg-plum px-4 py-3.5 font-bold text-white shadow-[0_14px_24px_-16px_rgba(76,41,72,.8)] transition hover:-translate-y-0.5 hover:bg-[#382039]">
+            Sign in
           </button>
         </form>
       </main>
@@ -113,8 +136,8 @@ export default function OwnerDash() {
     : null;
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <main className="owner-dashboard mx-auto max-w-6xl px-5 py-8 lg:px-8">
+      <div className="owner-dashboard-header flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-dim">
             {new Date().toLocaleDateString("en-KE", { weekday: "long", day: "numeric", month: "long" })}
@@ -124,7 +147,7 @@ export default function OwnerDash() {
           </h1>
           <p className="text-sm text-dim">{data.business.name}</p>
         </div>
-        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+        <div className="owner-header-actions flex w-full flex-wrap gap-2 sm:w-auto">
           <Link href="/pay" className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-dim">
           <Icon name="billing" size={16} /> Billing
           </Link>
@@ -163,7 +186,7 @@ export default function OwnerDash() {
       ) : null}
 
       {/* Revenue hero */}
-      <div className="mt-5 rounded-3xl border border-line bg-gradient-to-br from-[#fff5f3] via-surface to-[#f6eff5] p-6 text-center shadow-[0_16px_40px_-24px_rgba(93,58,88,0.4)]">
+      <div className="owner-revenue-card mt-5 rounded-3xl border border-line p-6 text-center">
         <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-dim">Collected today</div>
         <div className="font-display mt-1 text-4xl font-bold tabular-nums sm:text-5xl">{money(data.collected)}</div>
         <div className="mt-2 text-xs font-semibold">
@@ -183,13 +206,13 @@ export default function OwnerDash() {
       </div>
 
       {/* Accountability strip */}
-      <div className="mt-3 grid grid-cols-3 gap-3">
+      <div className="owner-kpi-grid mt-3 grid grid-cols-3 gap-3">
         <Stat label="Expected" value={money(data.expected)} />
         <Stat label="Collected" value={money(data.collected)} tone="good" />
         <Stat label="Variance" value={`${data.variance > 0 ? "⚠ " : ""}${money(data.variance)}`} tone={data.variance > 0 ? "warn" : "good"} />
       </div>
 
-      <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
+      <div className="owner-panel mt-4 rounded-2xl border border-line bg-surface p-4">
         <div className="flex justify-between text-sm">
           <span className="font-semibold">{data.business.plan.name} plan</span>
           <span className="text-dim">
@@ -207,7 +230,7 @@ export default function OwnerDash() {
       {/* Analytics */}
       {analyticsData && (
         <>
-          <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
+          <div className="owner-panel mt-4 rounded-2xl border border-line bg-surface p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="font-display font-bold">Revenue — last 14 days</h2>
               {analyticsData.month.mom_pct !== null && (
@@ -223,7 +246,7 @@ export default function OwnerDash() {
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-line bg-surface p-4">
+            <div className="owner-panel rounded-2xl border border-line bg-surface p-4">
               <h2 className="font-display font-bold">Staff this month</h2>
               {analyticsData.staff.length === 0 && <p className="mt-2 text-sm text-dim">No bills yet this month.</p>}
               {analyticsData.staff.map((s, i) => (
@@ -239,7 +262,7 @@ export default function OwnerDash() {
               ))}
             </div>
 
-            <div className="rounded-2xl border border-line bg-surface p-4">
+            <div className="owner-panel rounded-2xl border border-line bg-surface p-4">
               <h2 className="font-display font-bold">Top services</h2>
               {analyticsData.top_services.length === 0 && <p className="mt-2 text-sm text-dim">No paid services yet this month.</p>}
               {analyticsData.top_services.map((s) => (
@@ -256,7 +279,7 @@ export default function OwnerDash() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
+          <div className="owner-panel mt-4 rounded-2xl border border-line bg-surface p-4">
             <h2 className="font-display font-bold">Verification funnel — this month</h2>
             <div className="mt-3 grid grid-cols-3 gap-2 text-center">
               <FunnelStep label="Created" value={analyticsData.funnel.created} max={analyticsData.funnel.created} tone="bg-info" />
@@ -273,7 +296,7 @@ export default function OwnerDash() {
       )}
 
       {/* Team — invites */}
-      <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
+      <div className="owner-panel mt-4 rounded-2xl border border-line bg-surface p-4">
         <h2 className="font-display font-bold">Team</h2>
         <p className="text-xs text-dim">Assign each staff member a PIN. They will need the invite link and PIN to sign in.</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -321,7 +344,7 @@ export default function OwnerDash() {
 
       <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
         <h2 className="font-display font-bold">Today&apos;s activity</h2>
-        <div className="mt-2 max-h-72 space-y-1.5 overflow-y-auto pr-1">
+        <div className="owner-activity-list mt-2 max-h-72 space-y-1.5 overflow-y-auto pr-1">
           {data.audit_feed.map((e, i) => (
             <div key={i} className="flex items-baseline gap-2 text-sm">
               <span className="w-4 text-center text-brand">{EV_ICON[e.type] || "•"}</span>
@@ -333,7 +356,7 @@ export default function OwnerDash() {
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-surface p-4">
+      <div className="owner-panel mt-4 overflow-hidden rounded-2xl border border-line bg-surface p-4">
         <h2 className="font-display font-bold">All bills today</h2>
         <div className="-mx-4 overflow-x-auto px-4">
         <table className="mt-2 w-full min-w-[34rem] text-sm sm:min-w-0">

@@ -124,6 +124,35 @@ def signup(request):
     return Response(BusinessSerializer(biz).data, status=http.HTTP_201_CREATED)
 
 
+def _login_phone_digits(value):
+    digits = ''.join(ch for ch in str(value) if ch.isdigit())
+    return '254' + digits[1:] if digits.startswith('0') and len(digits) == 10 else digits
+
+
+@api_view(['POST'])
+@permission_classes([])
+def owner_login(request):
+    """Resolve a business username or registered phone before PIN auth."""
+    identifier = str(request.data.get('identifier') or '').strip()
+    pin = str(request.data.get('pin') or '').strip()
+    if not identifier or not pin:
+        raise Unauthorized('Enter your business username or phone number and PIN')
+
+    matches = list(Business.objects.filter(
+        Q(slug__iexact=identifier) | Q(name__iexact=identifier)
+    ))
+    if not matches:
+        digits = _login_phone_digits(identifier)
+        if digits:
+            matches = [
+                biz for biz in Business.objects.exclude(phone='')
+                if _login_phone_digits(biz.phone) == digits
+            ]
+    if len(matches) != 1 or matches[0].owner_pin != pin:
+        raise Unauthorized('Invalid username or phone number and PIN')
+    return Response({'slug': matches[0].slug, 'name': matches[0].name})
+
+
 # --- Catalog -----------------------------------------------------------------
 
 @api_view(['GET'])

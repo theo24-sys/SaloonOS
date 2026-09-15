@@ -7,6 +7,7 @@ urlpatterns = [
     re_path(r'^$', views.health),
     re_path(r'^api/plans/?$', views.plans),
     re_path(r'^api/signup/?$', views.signup),
+    re_path(r'^api/owner-login/?$', views.owner_login),
     re_path(r'^api/catalog/?$', views.catalog),
     re_path(r'^api/staff/add/?$', views.add_staff),
     re_path(r'^api/branding/?$', views.branding),
