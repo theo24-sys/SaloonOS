@@ -6,8 +6,8 @@ import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
 
-MAX_LOGO_BYTES = 1_000_000
-MAX_LOGO_DATA_URL_LENGTH = 1_400_000
+MAX_LOGO_BYTES = 5_000_000
+MAX_LOGO_DATA_URL_LENGTH = 7_000_000
 
 
 class ImageStorageError(Exception):
@@ -38,7 +38,7 @@ def store_logo(data_url, business_slug):
     except (ValueError, binascii.Error) as exc:
         raise ImageStorageError('Logo image data is invalid') from exc
     if len(payload) > MAX_LOGO_BYTES:
-        raise ImageStorageError('Logo must be smaller than 1 MB')
+        raise ImageStorageError('Logo must be smaller than 5 MB')
 
     key = f'logos/{business_slug}/{uuid.uuid4().hex}.{extension}'
     try:

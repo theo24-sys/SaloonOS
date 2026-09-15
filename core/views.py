@@ -188,7 +188,7 @@ def branding(request):
         if logo and logo == biz.logo_data_url:
             pass
         elif logo and (not logo.startswith('data:image/') or len(logo) > MAX_LOGO_DATA_URL_LENGTH):
-            raise Invalid('Logo must be an image smaller than 1 MB')
+            raise Invalid('Logo must be an image smaller than 5 MB')
         else:
             try:
                 biz.logo_data_url = store_logo(logo, biz.slug)
