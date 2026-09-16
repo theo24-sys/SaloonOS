@@ -53,6 +53,17 @@ body {
 
 .font-display { font-family: var(--font-display); }
 
+.app-chrome-logo,
+.app-footer-logo,
+.home-full-logo {
+  object-fit: contain;
+}
+.home-full-logo {
+  display: block;
+  width: min(100%, 270px);
+  height: auto;
+}
+
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -600,6 +611,16 @@ img { max-width: 100%; }
 }
 
 @media (max-width: 640px) {
+  .app-chrome-logo {
+    width: 92px;
+    height: 40px;
+  }
+  .app-footer-logo {
+    width: 160px;
+  }
+  .home-full-logo {
+    width: min(100%, 230px);
+  }
   .app-chrome-nav {
     gap: 10px;
     font-size: 12px;

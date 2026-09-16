@@ -21,11 +21,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
       <header className="no-print sticky top-0 z-10 border-b border-line bg-bg/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-[18px] py-3.5 sm:px-6">
           <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="SaloonOS home">
-            <Image src="/favicon.png" alt="SaloonOS logo" width={38} height={38} className="h-9 w-9 rounded-[11px]" />
-            <span className="text-[19px] font-semibold tracking-wide">
-              <span className="font-display">Saloon</span>
-              <span className="font-display italic text-brand">OS</span>
-            </span>
+            <Image src="/logo-full.png" alt="SaloonOS" width={150} height={62} priority className="app-chrome-logo h-11 w-[106px] object-contain" />
           </Link>
           <nav className="app-chrome-nav flex items-center gap-4 text-[13px] font-semibold text-dim sm:gap-7 sm:text-sm">
             <Link href="/pricing" className="transition hover:text-ink">Pricing</Link>
@@ -38,7 +34,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
       </header>
       {children}
       <footer className="no-print mx-auto max-w-6xl px-5 py-12 text-center text-xs text-dim sm:py-16">
-        <Image src="/favicon.png" alt="" width={28} height={28} className="mx-auto h-7 w-7 rounded-lg opacity-80" />
+        <Image src="/logo-full.png" alt="SaloonOS" width={300} height={124} className="app-footer-logo mx-auto h-auto w-44 object-contain" />
         <div className="mt-4">
           <span className="font-display text-base italic font-semibold text-ink">SaloonOS</span> <span className="mx-1 text-line2">·</span> Customer-verified billing for salons &amp; barbershops
         </div>

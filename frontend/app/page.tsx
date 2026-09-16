@@ -36,8 +36,7 @@ export default function Home() {
       <section className="hero-section">
         <div className="hero-copy">
           <div className="home-brand-lockup">
-            <Image src="/favicon.png" alt="" width={52} height={52} priority />
-            <span><strong>Saloon</strong><em>OS</em></span>
+            <Image src="/logo-full.png" alt="SaloonOS — Manage, Verify, Grow" width={420} height={174} priority className="home-full-logo" />
           </div>
           <div className="eyebrow"><span className="eyebrow-dot" /> Built for salons that want clean books</div>
           <h1>Know what happened at <em>every</em> chair.</h1>
