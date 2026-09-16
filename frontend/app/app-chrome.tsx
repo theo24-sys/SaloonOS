@@ -39,7 +39,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
           <span className="font-display text-base italic font-semibold text-ink">SaloonOS</span> <span className="mx-1 text-line2">·</span> Customer-verified billing for salons &amp; barbershops
         </div>
         <div className="mt-2 text-[11px] text-dim/80">
-          A product of <span className="font-semibold text-ink">Morggy Technologies</span> · Juja, Nairobi · Tel: <a href="tel:0714042946" className="text-plum font-semibold hover:underline">0714042946</a>
+          A product of <span className="font-semibold text-ink">Morggy Technologies</span> · Juja, Nairobi · <a href="mailto:morggytechnologies@gmail.com" className="text-plum font-semibold hover:underline">morggytechnologies@gmail.com</a> · Tel: <a href="tel:0714042946" className="text-plum font-semibold hover:underline">0714042946</a>
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px]">
           <Link href="/pricing" className="hover:text-ink">Pricing</Link>
