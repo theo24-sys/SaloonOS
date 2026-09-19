@@ -146,7 +146,6 @@ export type PlatformBusiness = {
   id: number;
   name: string;
   slug: string;
-  owner_pin: string;
   created_at: string;
   trial_ends_at: string | null;
   plan_paid_until: string | null;

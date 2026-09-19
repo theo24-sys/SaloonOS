@@ -1,14 +1,12 @@
-import calendar
 import hashlib
 import logging
-import random
 import re
 import secrets
 import string
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
 from rest_framework import status as http
@@ -19,9 +17,11 @@ from rest_framework.response import Response
 from .models import (Plan, Business, StaffMember, Service, Bill, BillItem,
                      BillEdit, AuditEvent, MpesaPayment, StaffInvite, StaffSession)
 from .mpesa import DarajaError, stk_push, stk_query, normalize_phone
+from .pins import check_pin, hash_pin, is_hashed
 from .storage import ImageStorageError, MAX_LOGO_DATA_URL_LENGTH, store_logo
 from .serializers import (PlanSerializer, BusinessSerializer, BillSerializer,
                           ServiceSerializer, StaffSerializer, audit)
+from . import throttle
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,22 @@ class PaymentRequired(APIException):
     default_detail = 'Plan limit reached'
 
 
+class Throttled(APIException):
+    status_code = http.HTTP_429_TOO_MANY_REQUESTS
+    default_detail = 'Too many attempts. Try again later.'
+
+
+def _pin_throttle_wait(request, business):
+    """Raise 429 when this business's PIN endpoint is locked out."""
+    wait = throttle.check('pin', business.slug)
+    if wait:
+        raise Throttled(f'Too many failed attempts. Try again in {wait} seconds.')
+
+
+def _pin_failure(request, business):
+    throttle.record_failure('pin', business.slug)
+
+
 def get_business(request):
     """Business context via X-SP-Business slug header."""
     slug = request.headers.get('X-SP-Business', '')
@@ -58,14 +74,27 @@ def get_business(request):
 
 
 def require_owner_pin(request, business):
+    """Constant-time, hashed PIN check with per-business lockout."""
+    _pin_throttle_wait(request, business)
     pin = request.headers.get('X-SP-PIN', '')
-    if pin != business.owner_pin:
-        raise Unauthorized('Invalid owner PIN')
+    if check_pin(pin, business.owner_pin):
+        if not is_hashed(business.owner_pin):
+            business.owner_pin = hash_pin(pin)
+            business.save(update_fields=['owner_pin'])
+        throttle.reset('pin', business.slug)
+        return
+    _pin_failure(request, business)
+    raise Unauthorized('Invalid owner PIN')
 
 
 def require_operator(request, business):
     """Allow a verified owner or an active invited staff session."""
-    if request.headers.get('X-SP-PIN', '') == business.owner_pin:
+    pin = request.headers.get('X-SP-PIN', '')
+    if pin and check_pin(pin, business.owner_pin):
+        if not is_hashed(business.owner_pin):
+            business.owner_pin = hash_pin(pin)
+            business.save(update_fields=['owner_pin'])
+        throttle.reset('pin', business.slug)
         require_active_subscription(business)
         return None
     token = request.headers.get('X-SP-Staff-Token', '')
@@ -78,12 +107,14 @@ def require_operator(request, business):
         if session:
             require_active_subscription(business)
             return session.staff
+    if pin:
+        _pin_failure(request, business)
     raise Unauthorized('Sign in with your staff invite or owner PIN')
 
 
 def gen_code():
     alphabet = string.ascii_uppercase + string.digits
-    return ''.join(random.choices(alphabet, k=6))
+    return ''.join(secrets.choice(alphabet) for _ in range(6))
 
 
 # --- Public: plans & signup -------------------------------------------------
@@ -122,8 +153,13 @@ def signup(request):
         n += 1
         slug = f"{base}{n}"
 
+    wait = throttle.check('signup', request.META.get('REMOTE_ADDR', '?'))
+    if wait:
+        raise Throttled(f'Too many signups from this address. Try again in {wait} seconds.')
+    throttle.record_failure('signup', request.META.get('REMOTE_ADDR', '?'))
+
     biz = Business.objects.create(name=name, slug=slug, plan=plan,
-                                  owner_pin=owner_pin, phone=phone[:20])
+                                  owner_pin=hash_pin(owner_pin), phone=phone[:20])
     return Response(BusinessSerializer(biz).data, status=http.HTTP_201_CREATED)
 
 
@@ -135,11 +171,16 @@ def _login_phone_digits(value):
 @api_view(['POST'])
 @permission_classes([])
 def owner_login(request):
-    """Resolve a business username or registered phone before PIN auth."""
+    """Resolve a business username or registered phone before PIN auth.
+    Rate limited per identifier: 10 failed guesses → 5-minute lockout."""
     identifier = str(request.data.get('identifier') or '').strip()
     pin = str(request.data.get('pin') or '').strip()
     if not identifier or not pin:
         raise Unauthorized('Enter your business username or phone number and PIN')
+
+    wait = throttle.check('login', identifier.lower())
+    if wait:
+        raise Throttled(f'Too many failed attempts. Try again in {wait} seconds.')
 
     matches = list(Business.objects.filter(
         Q(slug__iexact=identifier) | Q(name__iexact=identifier)
@@ -151,9 +192,15 @@ def owner_login(request):
                 biz for biz in Business.objects.exclude(phone='')
                 if _login_phone_digits(biz.phone) == digits
             ]
-    if len(matches) != 1 or matches[0].owner_pin != pin:
+    if len(matches) != 1 or not check_pin(pin, matches[0].owner_pin):
+        throttle.record_failure('login', identifier.lower())
         raise Unauthorized('Invalid username or phone number and PIN')
-    return Response({'slug': matches[0].slug, 'name': matches[0].name})
+    biz = matches[0]
+    if not is_hashed(biz.owner_pin):
+        biz.owner_pin = hash_pin(pin)
+        biz.save(update_fields=['owner_pin'])
+    throttle.reset('login', identifier.lower())
+    return Response({'slug': biz.slug, 'name': biz.name})
 
 
 # --- Catalog -----------------------------------------------------------------
@@ -253,6 +300,8 @@ def add_service(request):
 # --- Bills -------------------------------------------------------------------
 
 def verified_count_this_month(biz):
+    """Bills the customer approved this calendar month (voided/refunded bills
+    don't count toward the plan cap — they were never really served)."""
     now = timezone.now()
     return Bill.objects.filter(
         business=biz,
@@ -316,7 +365,8 @@ def edit_bill(request, code):
     Approved+ bills are immutable — void & re-create instead."""
     biz = get_business(request)
     operator = require_operator(request, biz)
-    bill = Bill.objects.select_related('business').filter(code=code, business=biz).first()
+    bill = (Bill.objects.select_for_update()
+            .select_related('business').filter(code=code, business=biz).first())
     if not bill:
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
     if bill.status != 'pending':
@@ -346,6 +396,14 @@ def edit_bill(request, code):
 def get_bill(request, code):
     """Public customer fetch. Marks that the QR was scanned (audit)."""
     slug = request.headers.get('X-SP-Business', '')
+    # Anti-enumeration: bill codes are 6 chars; throttle wild guessing per IP.
+    if not Bill.objects.filter(code=code).exists():
+        ip = request.META.get('REMOTE_ADDR', '?')
+        throttle.record_failure('bill_code', ip)
+        wait = throttle.check('bill_code', ip)
+        if wait:
+            raise Throttled(f'Too many bill lookups. Try again in {wait} seconds.')
+        return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
     qs = Bill.objects.select_related('business', 'staff')
     bill = qs.filter(code=code, business__slug=slug).first() if slug else \
         qs.filter(code=code).first()
@@ -358,14 +416,21 @@ def get_bill(request, code):
 
 @api_view(['POST'])
 @permission_classes([])
+@transaction.atomic
 def verify_bill(request, code):
-    bill = Bill.objects.filter(code=code).first()
+    # Lock the bill, then the business row (consistent order everywhere), so
+    # the status check and the monthly verified-bills cap are enforced under
+    # one lock — two concurrent verifies can't both slip past the cap.
+    bill = (Bill.objects.select_for_update()
+            .select_related('business', 'business__plan')
+            .filter(code=code).first())
     if not bill:
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
+    biz = Business.objects.select_for_update().get(id=bill.business_id)
     if bill.status != 'pending':
         raise Conflict(f"Bill is already {bill.status}")
-    require_active_subscription(bill.business)
-    if verified_count_this_month(bill.business) >= bill.business.plan.monthly_verified_bills:
+    require_active_subscription(biz)
+    if verified_count_this_month(biz) >= biz.plan.monthly_verified_bills:
         raise PaymentRequired(
             f"{bill.business.plan.name} plan allows {bill.business.plan.monthly_verified_bills} "
             "verified bills/month. The salon must upgrade to verify this bill.")
@@ -388,10 +453,11 @@ def verify_bill(request, code):
 
 @api_view(['POST'])
 @permission_classes([])
+@transaction.atomic
 def pay_bill(request, code):
     biz = get_business(request)
     require_operator(request, biz)
-    bill = Bill.objects.filter(code=code, business=biz).first()
+    bill = Bill.objects.select_for_update().filter(code=code, business=biz).first()
     if not bill:
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
     if bill.status == 'pending':
@@ -411,10 +477,11 @@ def pay_bill(request, code):
 
 @api_view(['POST'])
 @permission_classes([])
+@transaction.atomic
 def void_bill(request, code):
     biz = get_business(request)
     require_owner_pin(request, biz)
-    bill = Bill.objects.filter(code=code, business=biz).first()
+    bill = Bill.objects.select_for_update().filter(code=code, business=biz).first()
     if not bill:
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
     if bill.status in ('paid', 'refunded'):
@@ -447,19 +514,10 @@ def _grant(biz, plan, cycle, until):
     biz.save(update_fields=['plan', 'plan_paid_until'])
 
 
-def _add_months(dt, months):
-    """Same-day-of-month arithmetic, clamped for short months (Jan 31 + 1mo)."""
-    y, m = dt.year, dt.month + months
-    y += (m - 1) // 12
-    m = (m - 1) % 12 + 1
-    days_in = calendar.monthrange(y, m)[1]
-    day = min(dt.day, days_in)
-    return dt.replace(year=y, month=m, day=day)
-
-
 def _settle_success(biz, pay):
     """Shared by callback + poll: mark success and extend the subscription,
-    stacking past the current paid-until date."""
+    stacking past the current paid-until date. Callers must hold a row lock on
+    `pay` (select_for_update) so a callback and a poll can never both extend."""
     plan, cycle = pay.plan, pay.cycle
     now = timezone.now()
     # Monthly payments buy 30 days; annual buys 365 (no calendar drift).
@@ -552,21 +610,24 @@ def mpesa_status(request, payment_id):
     if not pay:
         return Response({'error': 'Payment not found'}, status=http.HTTP_404_NOT_FOUND)
 
-    if pay.status == 'pending' and not settings.MPESA_SIMULATE:
-        try:
-            rc = stk_query(pay.checkout_request_id)
-        except DarajaError as e:
-            logger.warning("mpesa_status_query_failed payment_id=%s checkout_suffix=%s error=%s",
-                           pay.id, pay.checkout_request_id[-10:], e)
-            rc = None
-        logger.info("mpesa_status_observed payment_id=%s stored_status=%s query_result=%s",
-                    pay.id, pay.status, rc)
-        if rc == '0':
-            _settle_success(biz, pay)
-        elif rc not in (None, 'PENDING'):
-            age = (timezone.now() - pay.created_at).total_seconds()
-            if age >= STK_QUERY_FAILURE_GRACE_SECONDS:
-                _settle_failure(biz, pay, rc, 'Failed (query)')
+    # Lock the row so a callback arriving mid-poll can't double-settle.
+    with transaction.atomic():
+        pay = MpesaPayment.objects.select_for_update().get(id=pay.id)
+        if pay.status == 'pending' and not settings.MPESA_SIMULATE:
+            try:
+                rc = stk_query(pay.checkout_request_id)
+            except DarajaError as e:
+                logger.warning("mpesa_status_query_failed payment_id=%s checkout_suffix=%s error=%s",
+                               pay.id, pay.checkout_request_id[-10:], e)
+                rc = None
+            logger.info("mpesa_status_observed payment_id=%s stored_status=%s query_result=%s",
+                        pay.id, pay.status, rc)
+            if rc == '0':
+                _settle_success(biz, pay)
+            elif rc not in (None, 'PENDING'):
+                age = (timezone.now() - pay.created_at).total_seconds()
+                if age >= STK_QUERY_FAILURE_GRACE_SECONDS:
+                    _settle_failure(biz, pay, rc, 'Failed (query)')
 
     pay.refresh_from_db()
     return Response({
@@ -616,24 +677,31 @@ def mpesa_callback(request):
         logger.warning("mpesa_callback_rejected payment_id=%s reason=bad_token", pay.id)
         return Response({'ResultCode': 0, 'ResultDesc': 'Rejected: bad token'})
 
-    if pay.status == 'pending':
-        if result_code == '0':
-            if amount and pay.amount and amount != pay.amount:
-                pay.result_desc = f'Amount mismatch: expected {pay.amount}, got {amount}'[:255]
-                pay.status = 'failed'
-                pay.completed_at = timezone.now()
-                pay.save(update_fields=['result_desc', 'status', 'completed_at'])
-                logger.error("mpesa_callback_amount_mismatch payment_id=%s expected=%s received=%s",
-                             pay.id, pay.amount, amount)
+    # Serialize against mpesa_status polling and duplicate deliveries: whoever
+    # takes the row lock first settles; the loser sees a non-pending status.
+    with transaction.atomic():
+        pay = MpesaPayment.objects.select_for_update().select_related('business').get(id=pay.id)
+        if pay.status == 'pending':
+            if result_code == '0':
+                if amount and pay.amount and amount != pay.amount:
+                    pay.result_desc = f'Amount mismatch: expected {pay.amount}, got {amount}'[:255]
+                    pay.status = 'failed'
+                    pay.completed_at = timezone.now()
+                    pay.save(update_fields=['result_desc', 'status', 'completed_at'])
+                    logger.error("mpesa_callback_amount_mismatch payment_id=%s expected=%s received=%s",
+                                 pay.id, pay.amount, amount)
+                else:
+                    pay.mpesa_receipt = receipt
+                    _settle_success(pay.business, pay)
+                    logger.info("mpesa_callback_success payment_id=%s receipt_present=%s",
+                                pay.id, bool(receipt))
             else:
-                pay.mpesa_receipt = receipt
-                _settle_success(pay.business, pay)
-                logger.info("mpesa_callback_success payment_id=%s receipt_present=%s",
-                            pay.id, bool(receipt))
+                _settle_failure(pay.business, pay, result_code, result_desc)
+                logger.warning("mpesa_callback_failure payment_id=%s result_code=%s description=%s",
+                               pay.id, result_code, result_desc[:160])
         else:
-            _settle_failure(pay.business, pay, result_code, result_desc)
-            logger.warning("mpesa_callback_failure payment_id=%s result_code=%s description=%s",
-                           pay.id, result_code, result_desc[:160])
+            logger.info("mpesa_callback_ignored reason=already_settled payment_id=%s status=%s",
+                        pay.id, pay.status)
 
     return Response({'ResultCode': 0, 'ResultDesc': 'Accepted'})
 
@@ -660,8 +728,12 @@ SCAN_CODE_RE = re.compile(r'^[A-Z0-9]{8,15}$')
 
 
 def _receipt_taken(code):
-    """A receipt code can only ever be redeemed once across the whole platform,
-    whatever kind of payment it settles (plan or customer bill)."""
+    """Cross-table pre-check: a receipt can only ever be redeemed once across
+    the whole platform, whether it settled a plan payment or a customer bill.
+    Same-table concurrent races are additionally blocked by the partial unique
+    constraints (uniq_mpesapayment_receipt / uniq_bill_payment_ref); the
+    cross-table race window left here is one request wide on a single shared
+    receipt and is acceptable vs. a global lock table."""
     if MpesaPayment.objects.filter(mpesa_receipt=code).exists():
         return True
     return Bill.objects.filter(payment_ref=code).exists()
@@ -691,11 +763,17 @@ def redeem_scan_plan(request):
 
     plan = biz.plan
     amount = plan.price_annual if cycle == 'annual' else plan.price_monthly
-    pay = MpesaPayment.objects.create(
-        business=biz, plan=plan, cycle=cycle, amount=amount,
-        phone='scanned', status='pending', checkout_request_id=f"SCAN-{receipt}")
-    pay.mpesa_receipt = receipt
-    until = _settle_success(biz, pay)
+    # Commit the receipt before any other request can redeem it: the unique
+    # constraint on mpesa_receipt/payment_ref makes double-spend impossible.
+    try:
+        with transaction.atomic():
+            pay = MpesaPayment.objects.create(
+                business=biz, plan=plan, cycle=cycle, amount=amount,
+                phone='scanned', status='pending', checkout_request_id=f"SCAN-{receipt}",
+                mpesa_receipt=receipt)
+            until = _settle_success(biz, pay)
+    except IntegrityError:
+        raise Conflict('That M-Pesa receipt has already been used.')
     return Response({
         'ok': True, 'plan': plan.name, 'amount': amount, 'mpesa_receipt': receipt,
         'subscription': biz.subscription_info(), 'paid_until': until,
@@ -711,21 +789,23 @@ def redeem_scan_bill(request):
     bill = Bill.objects.filter(code=request.data.get('code') or '', business=biz).first()
     if not bill:
         return Response({'error': 'Bill not found'}, status=http.HTTP_404_NOT_FOUND)
-    if bill.status == 'pending':
-        raise Conflict('Customer has not verified this bill yet')
-    if bill.status != 'approved':
-        raise Conflict(f"Bill is {bill.status}")
     receipt = str(request.data.get('receipt') or '').strip().upper()
     if not SCAN_CODE_RE.match(receipt):
         raise Invalid('Enter the M-Pesa receipt code from the confirmation SMS')
-    if _receipt_taken(receipt):
+    try:
+        with transaction.atomic():
+            bill = Bill.objects.select_for_update().get(id=bill.id)
+            if bill.status == 'pending':
+                raise Conflict('Customer has not verified this bill yet')
+            if bill.status != 'approved':
+                raise Conflict(f"Bill is {bill.status}")
+            bill.status = 'paid'
+            bill.payment_method = 'M-Pesa scan'
+            bill.payment_ref = receipt
+            bill.paid_at = timezone.now()
+            bill.save(update_fields=['status', 'payment_method', 'payment_ref', 'paid_at'])
+    except IntegrityError:
         raise Conflict('That M-Pesa receipt has already been used.')
-
-    bill.status = 'paid'
-    bill.payment_method = 'M-Pesa scan'
-    bill.payment_ref = receipt
-    bill.paid_at = timezone.now()
-    bill.save(update_fields=['status', 'payment_method', 'payment_ref', 'paid_at'])
     audit(bill, 'paid', f"KSh {bill.total} paid via scan-to-pay — receipt {receipt}")
     return Response(BillSerializer(bill, context={'request': request}).data)
 
@@ -750,10 +830,6 @@ def analytics(request):
 
     # 14-day revenue trend (paid revenue by day)
     days, labels, series = 14, [], []
-    per_day = dict(biz.bills.filter(status='paid', paid_at__date__gte=today - timedelta(days=13))
-                   .values_list('paid_at__date')
-                   .annotate(s=Sum('total')).values_list('paid_at__date', 's'))
-    # values_list+annotate combo returns rows; rebuild safely:
     per_day = {
         row['d']: row['s']
         for row in biz.bills.filter(status='paid', paid_at__date__gte=today - timedelta(days=13))
@@ -833,7 +909,7 @@ def invite_create(request):
         raise PaymentRequired(
             f"Your {biz.plan.name} plan allows {staff_limit} staff. Upgrade to add more.")
     inv = StaffInvite.objects.create(
-        business=biz, name=name, staff_pin=staff_pin,
+        business=biz, name=name, staff_pin=hash_pin(staff_pin),
         code=gen_code() + gen_code(), created_by_pin=biz.owner_pin)
     return Response({
         'code': inv.code,
@@ -853,7 +929,7 @@ def invite_accept(request):
     if not inv:
         return Response({'error': 'This invite link is invalid or already used.'},
                         status=http.HTTP_400_BAD_REQUEST)
-    if staff_pin != inv.staff_pin:
+    if not check_pin(staff_pin, inv.staff_pin):
         return Response({'error': 'Incorrect staff PIN.'}, status=http.HTTP_401_UNAUTHORIZED)
     staff_limit = max(2, inv.business.plan.max_staff)
     managed_staff_count = inv.business.staff.exclude(staff_pin='').count()
@@ -867,6 +943,7 @@ def invite_accept(request):
     if member.staff_pin != inv.staff_pin:
         member.staff_pin = inv.staff_pin
         member.save(update_fields=['staff_pin'])
+    # (invite stores a hashed staff_pin; both rows above copy the hash)
     raw_token = secrets.token_urlsafe(32)
     StaffSession.objects.create(
         business=inv.business,
@@ -955,8 +1032,8 @@ def bill_audit(request, code):
 
 def require_admin_key(request):
     key = request.headers.get('X-SP-Admin-Key', '').strip()
-    expected = getattr(settings, 'ADMIN_KEY', 'saloonos-master-2026').strip()
-    if not key or key != expected:
+    expected = str(getattr(settings, 'ADMIN_KEY', '')).strip()
+    if not expected or not key or not secrets.compare_digest(key, expected):
         raise Unauthorized('Invalid or missing platform admin key')
 
 
@@ -1046,7 +1123,6 @@ def platform_admin_businesses(request):
             'id': b.id,
             'name': b.name,
             'slug': b.slug,
-            'owner_pin': b.owner_pin,
             'created_at': b.created_at,
             'trial_ends_at': b.trial_ends_at,
             'plan_paid_until': b.plan_paid_until,
@@ -1104,11 +1180,11 @@ def platform_admin_update_business(request, slug):
         except Plan.DoesNotExist:
             return Response({'error': 'Unknown plan'}, status=http.HTTP_400_BAD_REQUEST)
 
-    # Reset owner PIN
+    # Reset owner PIN (stored hashed, like every other write path)
     if 'owner_pin' in payload:
         pin = str(payload['owner_pin']).strip()
         if len(pin) >= 4:
-            biz.owner_pin = pin
+            biz.owner_pin = hash_pin(pin)
 
     if 'name' in payload and str(payload['name']).strip():
         biz.name = str(payload['name']).strip()
@@ -1119,7 +1195,6 @@ def platform_admin_update_business(request, slug):
         'business': {
             'slug': biz.slug,
             'name': biz.name,
-            'owner_pin': biz.owner_pin,
             'plan': biz.plan.code,
             'subscription': biz.subscription_info(),
         }

@@ -11,6 +11,7 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 from core.models import (Plan, Business, StaffMember, Service, Bill, BillItem,
                          BillEdit, AuditEvent)
+from core.pins import hash_pin
 
 PLANS = [
     dict(code='starter', name='Starter', price_monthly=299, price_annual=2990,
@@ -69,7 +70,7 @@ def run():
 
     plan_growth = Plan.objects.get(code='growth')
     biz = Business.objects.create(name='XYZ Salon', slug='xyz-salon',
-                                  plan=plan_growth, owner_pin='2026',
+                                  plan=plan_growth, owner_pin=hash_pin('2026'),
                                   plan_paid_until=timezone.now() + timedelta(days=30))
 
     staff = {}

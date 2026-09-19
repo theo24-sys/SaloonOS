@@ -93,7 +93,9 @@ export default function PlatformAdminDashboard() {
         paid_days_add?: number;
       } = {};
       if (editPlan && editPlan !== editingBiz.plan.code) payload.plan_code = editPlan;
-      if (editPin && editPin !== editingBiz.owner_pin) payload.owner_pin = editPin;
+      // PINs are stored hashed and never returned by the API — only a reset
+      // (typed into the field) changes access.
+      if (editPin) payload.owner_pin = editPin;
       if (trialDaysAdd > 0) payload.trial_days_add = trialDaysAdd;
       if (paidDaysAdd > 0) payload.paid_days_add = paidDaysAdd;
 
@@ -440,14 +442,14 @@ export default function PlatformAdminDashboard() {
                         )}
                       </div>
                     </td>
-                    <td className="p-3.5 font-mono font-bold text-plum">{b.owner_pin}</td>
+                    <td className="p-3.5 font-mono text-dim">••••</td>
                     <td className="p-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => {
                             setEditingBiz(b);
                             setEditPlan(b.plan.code);
-                            setEditPin(b.owner_pin);
+                            setEditPin(""); // blank = keep current PIN
                             setTrialDaysAdd(0);
                             setPaidDaysAdd(0);
                             setActionMsg("");
@@ -459,7 +461,7 @@ export default function PlatformAdminDashboard() {
                         <button
                           onClick={() => {
                             store.slug = b.slug;
-                            store.pin = b.owner_pin;
+                            store.pin = ""; // PINs are hashed server-side; owner signs in themselves
                             window.open("/owner", "_blank");
                           }}
                           className="rounded-lg border border-line bg-surface2 px-2 py-1 text-[11px] font-semibold hover:border-brand"
@@ -575,12 +577,12 @@ export default function PlatformAdminDashboard() {
 
               {/* Reset Owner PIN */}
               <div>
-                <label className="font-bold text-dim uppercase">Owner Access PIN (4-8 digits)</label>
+                <label className="font-bold text-dim uppercase">Reset Owner PIN (4-8 digits)</label>
                 <input
                   value={editPin}
                   onChange={(e) => setEditPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  placeholder="Leave blank to keep current"
                   className="mt-1 w-full rounded-xl border border-line bg-surface2 px-3 py-2 font-mono text-sm tracking-widest outline-none focus:border-brand"
-                  required
                 />
               </div>
 

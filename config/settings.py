@@ -17,8 +17,18 @@ def env(key, default=''):
 
 
 SECRET_KEY = env('SECRET_KEY', 'dev-only-serviceproof-secret-key-change-me')
-ADMIN_KEY = env('ADMIN_KEY', 'saloonos-master-2026')
 DEBUG = env('DEBUG', '1') not in ('0', 'false', 'False')
+# Fail closed: no default admin key in production. The default keeps local dev
+# frictionless; a production deploy without ADMIN_KEY crashes at startup instead
+# of silently exposing the platform-admin API (tenant directory, owner PINs).
+ADMIN_KEY = env('ADMIN_KEY') or ('saloonos-master-2026' if DEBUG else '')
+if not DEBUG and not ADMIN_KEY:
+    raise ImproperlyConfigured(
+        'ADMIN_KEY is required when DEBUG=0. Generate one: python -c "import secrets; print(secrets.token_urlsafe(32))"')
+# Server-side pepper for PIN hashing (core/pins.py). Falls back to SECRET_KEY
+# when unset so dev keeps working; set a distinct value in production and treat
+# it as a credential — losing it makes every stored PIN hash unverifiable.
+PIN_PEPPER = env('PIN_PEPPER') or SECRET_KEY
 ALLOWED_HOSTS = [h for h in env('ALLOWED_HOSTS', '*').split(',') if h]
 
 INSTALLED_APPS = [
@@ -113,6 +123,14 @@ CORS_ALLOWED_ORIGINS = [o for o in env(
     'CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000'
 ).split(',') if o]
 CORS_ALLOW_HEADERS = ['content-type', 'x-sp-business', 'x-sp-pin', 'x-sp-staff-token', 'x-sp-public-origin']
+
+CACHES = {
+    'default': {
+        'BACKEND': env('CACHE_BACKEND',
+                       'django.core.cache.backends.locmem.LocMemCache'),
+        'LOCATION': env('CACHE_LOCATION', 'saloonos-default'),
+    }
+}
 
 # Render terminates TLS before forwarding requests to Django. Keep generated
 # URLs and production responses HTTPS-only while preserving local HTTP dev.

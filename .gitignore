@@ -11,6 +11,10 @@ frontend/out/
 # Django
 staticfiles/
 *.log
+frontend/tsconfig.tsbuildinfo
+
+# Freebuff local tooling metadata
+.freebuff/
 
 # Databases
 *.sqlite3

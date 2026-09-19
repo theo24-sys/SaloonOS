@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -22,7 +23,7 @@ class Business(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(unique=True)
     plan = models.ForeignKey(Plan, on_delete=models.PROTECT)
-    owner_pin = models.CharField(max_length=8)      # dashboard access
+    owner_pin = models.CharField(max_length=255)   # dashboard access (hashed via core.pins)
     created_at = models.DateTimeField(auto_now_add=True)
     # --- Subscription state (M-Pesa plan payments) ---
     trial_ends_at = models.DateTimeField(null=True, blank=True)  # 7-day trial from signup
@@ -71,7 +72,7 @@ class StaffMember(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='staff')
     name = models.CharField(max_length=80)
     role = models.CharField(max_length=20, default='staff')  # staff | manager
-    staff_pin = models.CharField(max_length=8, blank=True, default='')
+    staff_pin = models.CharField(max_length=255, blank=True, default='')
 
     class Meta:
         unique_together = ('business', 'name')
@@ -121,6 +122,12 @@ class Bill(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        constraints = [
+            # A receipt marks at most one bill paid, platform-wide (partial:
+            # blank payment_ref rows stay unlimited).
+            models.UniqueConstraint(fields=['payment_ref'], condition=~Q(payment_ref=''),
+                                    name='uniq_bill_payment_ref'),
+        ]
 
     def __str__(self):
         return f"#{self.code} {self.customer_name} — {self.status}"
@@ -158,9 +165,9 @@ class StaffInvite(models.Model):
     once used or revoked."""
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='staff_invites')
     name = models.CharField(max_length=80)
-    staff_pin = models.CharField(max_length=8)
+    staff_pin = models.CharField(max_length=255)
     code = models.CharField(max_length=12, unique=True)
-    created_by_pin = models.CharField(max_length=8)   # owner PIN at issuance (audit context)
+    created_by_pin = models.CharField(max_length=255)   # owner PIN hash at issuance (audit context)
     used = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     used_at = models.DateTimeField(null=True, blank=True)
@@ -206,6 +213,13 @@ class MpesaPayment(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        constraints = [
+            # Receipts are redeemed once across the whole platform: partial
+            # unique index keeps the blank rows unlimited, distinct receipts
+            # single-use even under concurrent redemptions.
+            models.UniqueConstraint(fields=['mpesa_receipt'], condition=~Q(mpesa_receipt=''),
+                                    name='uniq_mpesapayment_receipt'),
+        ]
 
     def __str__(self):
         return f"{self.business.slug} {self.plan.code} KSh {self.amount} — {self.status}"
@@ -223,7 +237,9 @@ class AuditEvent(models.Model):
         ('voided', 'Bill voided'),
         ('refunded', 'Bill refunded'),
     ]
-    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='events')
+    # The audit trail is the accountability record — it must never be
+    # silently destroyed by a bill deletion.
+    bill = models.ForeignKey(Bill, on_delete=models.PROTECT, related_name='events')
     type = models.CharField(max_length=12, choices=TYPE_CHOICES)
     detail = models.CharField(max_length=255, blank=True)
     at = models.DateTimeField(auto_now_add=True)
